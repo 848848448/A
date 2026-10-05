@@ -57,26 +57,20 @@ placeholder on the `database_id = "…"` line.
 > stays disabled for now — the app runs fine without it and performers add a photo by pasting
 > an image link. To turn on photo-file uploads later, see *Enable photo uploads* at the bottom.
 
-### 4. Set a session secret (recommended)
-```bash
-npx wrangler secret put SESSION_SECRET
-# paste any long random string when prompted
-```
-
-### 5. Create the tables and seed the first admin + samples
+### 4. Create the tables and seed the first admin + samples
 ```bash
 npm run db:init           # runs schema.sql against your live D1
 npm run db:seed           # adds the admin login + sample performers
 ```
 
-### 6. Deploy
+### 5. Deploy
 ```bash
 npm run deploy
 ```
 Wrangler prints your live URL, e.g. `https://muzik-direktorie.<your-subdomain>.workers.dev`.
 Open it — the site is live, with real logins and saved bookings.
 
-### 7. First thing after deploying
+### 6. First thing after deploying
 Log in as the admin (`avrumypolatsek@gmail.com` / `admin1234`) and **change the password**
 from Dashboard → Settings. Then use the admin panel to open accounts for your singers and
 musicians.

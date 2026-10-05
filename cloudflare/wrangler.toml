@@ -24,7 +24,3 @@ database_id = "00000000-0000-0000-0000-000000000000"  # REPLACE with your real D
 # [[r2_buckets]]
 # binding = "BUCKET"
 # bucket_name = "muzik-uploads"
-
-[vars]
-# Change this to any long random string in production (or set as a secret).
-SESSION_SECRET = "change-me-to-a-long-random-string"
