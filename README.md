@@ -8,6 +8,16 @@ their own profile, set their availability, and handle their bookings.
 The interface is in English and uses Google's **Material Symbols** icon set and a
 Material-inspired design, in both light and dark themes.
 
+## Live preview
+
+A static, browsable preview of the site is published via GitHub Pages:
+**https://848848448.github.io/A/** (served from `index.html`). You can search, filter,
+open profiles, view availability, and try the booking form there.
+
+That preview is front-end only. The **full app** — real logins, saved availability and
+bookings, and the admin panel — is the Node.js server below, which needs a host that can run
+Node (see **Running it**). GitHub Pages serves static files only, so it cannot run the server.
+
 ---
 
 ## Features

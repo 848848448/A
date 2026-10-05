@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Music Directory</title>
+<meta name="description" content="Interactive preview of a directory and booking site for singers, musicians and all music people." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0..1,0&display=swap" rel="stylesheet" />
+<style>
+  /* Layout: sticky app bar → gradient hero w/ search → filter chips → card grid; card opens a full profile view in place. */
+  :root {
+    --primary:#6c4cd6; --primary-hover:#5c3ec4; --on-primary:#fff;
+    --primary-container:#eaddff; --on-primary-container:#24005a;
+    --accent:#ff5a8a; --accent-container:#ffd9e2; --on-accent-container:#3f0021;
+    --surface:#fff; --surface-2:#faf7ff; --surface-3:#f3eefb; --surface-sunken:#f1ecf8;
+    --fg:#1c1b1f; --muted:#605d6a; --outline:#d9d3e6; --outline-soft:#ece8f4;
+    --bg:#f6f3fc;
+    --success:#1f9d55; --success-bg:#e4f7ec; --danger:#d1374a; --danger-bg:#ffe4e7;
+    --info:#2f6fed; --info-bg:#e4edff;
+    --shadow-1:0 1px 2px rgba(28,27,31,.08),0 1px 3px rgba(28,27,31,.06);
+    --shadow-2:0 4px 10px rgba(50,30,110,.10),0 2px 4px rgba(50,30,110,.06);
+    --shadow-3:0 12px 28px rgba(50,30,110,.16);
+    --r-xl:28px; --r-lg:20px; --r-md:14px; --r-pill:999px;
+    --font:"Rubik",system-ui,-apple-system,"Segoe UI",sans-serif;
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+    --primary:#cdbdff; --primary-hover:#ddd1ff; --on-primary:#351b7a;
+    --primary-container:#4c33a3; --on-primary-container:#eaddff;
+    --accent:#ffb0c6; --accent-container:#8a2d4f; --on-accent-container:#ffd9e2;
+    --surface:#1a1820; --surface-2:#211e2a; --surface-3:#262233; --surface-sunken:#15131b;
+    --fg:#e8e4f0; --muted:#a9a3b8; --outline:#3b3747; --outline-soft:#2c2838;
+    --bg:#121019;
+    --success:#6ddc9b; --success-bg:#163726; --danger:#ff9aa6; --danger-bg:#43181e;
+    --info:#9cc0ff; --info-bg:#182a4a;
+    --shadow-1:0 1px 2px rgba(0,0,0,.4); --shadow-2:0 4px 12px rgba(0,0,0,.45); --shadow-3:0 14px 32px rgba(0,0,0,.55);
+    color-scheme:dark;
+  }}
+  :root[data-theme="dark"]{
+    --primary:#cdbdff; --primary-hover:#ddd1ff; --on-primary:#351b7a;
+    --primary-container:#4c33a3; --on-primary-container:#eaddff;
+    --accent:#ffb0c6; --accent-container:#8a2d4f; --on-accent-container:#ffd9e2;
+    --surface:#1a1820; --surface-2:#211e2a; --surface-3:#262233; --surface-sunken:#15131b;
+    --fg:#e8e4f0; --muted:#a9a3b8; --outline:#3b3747; --outline-soft:#2c2838;
+    --bg:#121019;
+    --success:#6ddc9b; --success-bg:#163726; --danger:#ff9aa6; --danger-bg:#43181e;
+    --info:#9cc0ff; --info-bg:#182a4a;
+    --shadow-1:0 1px 2px rgba(0,0,0,.4); --shadow-2:0 4px 12px rgba(0,0,0,.45); --shadow-3:0 14px 32px rgba(0,0,0,.55);
+    color-scheme:dark;
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--font);background:var(--bg);color:var(--fg);line-height:1.6;font-size:16px}
+  a{color:inherit;text-decoration:none}
+  .material-symbols-rounded{font-family:"Material Symbols Rounded";font-weight:normal;font-style:normal;line-height:1;vertical-align:middle;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;direction:ltr;-webkit-font-feature-settings:'liga';font-feature-settings:'liga';font-size:24px;-webkit-font-smoothing:antialiased}
+  .material-symbols-rounded.fill{font-variation-settings:'FILL' 1,'wght' 500}
+
+  .container{width:100%;max-width:1140px;margin-inline:auto;padding-inline:20px}
+  .page{padding-block:28px 56px}
+  .section-gap{margin-top:32px}
+
+  .appbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid var(--outline-soft)}
+  .appbar-inner{display:flex;align-items:center;gap:14px;height:68px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.2rem;min-width:0}
+  .brand .logo{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;box-shadow:var(--shadow-2);flex-shrink:0}
+  .brand small{display:block;font-size:.7rem;font-weight:500;color:var(--muted)}
+  .preview-tag{margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;background:var(--primary-container);color:var(--on-primary-container);padding:6px 13px;border-radius:var(--r-pill);font-size:.82rem;font-weight:600}
+  .icon-btn{width:42px;height:42px;border-radius:var(--r-pill);display:grid;place-items:center;border:none;cursor:pointer;background:var(--surface-3);color:var(--fg)}
+  .icon-btn:hover{background:var(--outline-soft)}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 20px;border-radius:var(--r-pill);font-family:inherit;font-size:.98rem;font-weight:600;border:none;cursor:pointer;transition:all .15s;white-space:nowrap}
+  .btn .material-symbols-rounded{font-size:20px}
+  .btn-primary{background:var(--primary);color:var(--on-primary);box-shadow:var(--shadow-1)}
+  .btn-primary:hover{background:var(--primary-hover)}
+  .btn-accent{background:var(--accent);color:#fff;box-shadow:var(--shadow-1)}
+  .btn-tonal{background:var(--primary-container);color:var(--on-primary-container)}
+  .btn-ghost{background:transparent;color:var(--muted)}
+  .btn-ghost:hover{background:var(--surface-3);color:var(--fg)}
+  .btn-block{width:100%}
+  .btn-sm{padding:7px 13px;font-size:.86rem}
+
+  .card{background:var(--surface);border:1px solid var(--outline-soft);border-radius:var(--r-lg);box-shadow:var(--shadow-1)}
+  .card-pad{padding:22px}
+
+  .hero{position:relative;overflow:hidden;border-radius:var(--r-xl);background:radial-gradient(120% 140% at 100% 0%,color-mix(in srgb,var(--accent) 40%,transparent),transparent 55%),linear-gradient(135deg,var(--primary),#4a2fb0);color:#fff;padding:44px 36px;box-shadow:var(--shadow-3)}
+  .hero h1{margin:0 0 10px;font-size:clamp(1.8rem,4vw,2.8rem);line-height:1.2;font-weight:700;text-wrap:balance}
+  .hero p{margin:0 0 22px;font-size:1.05rem;color:rgba(255,255,255,.9);max-width:620px}
+  .hero-note{display:inline-flex;gap:8px;align-items:center;background:rgba(255,255,255,.16);padding:7px 15px;border-radius:var(--r-pill);font-size:.88rem;margin-bottom:18px}
+  .hero-deco{position:absolute;inset-inline-start:-40px;inset-block-end:-60px;font-size:300px;opacity:.08;pointer-events:none}
+  .searchbar form{display:flex;gap:10px;flex-wrap:wrap}
+  .search-field{flex:1;min-width:220px;display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:var(--r-pill);padding:4px 6px 4px 18px;box-shadow:var(--shadow-2)}
+  .search-field .material-symbols-rounded{color:var(--primary)}
+  .search-field input{flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:inherit;font-size:1rem;color:var(--fg);padding:12px 0}
+  @media (max-width:560px){.searchbar form .search-field{min-width:100%}.searchbar form .btn{width:100%}}
+
+  .chips{display:flex;gap:10px;flex-wrap:wrap}
+  .chip{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:var(--r-pill);background:var(--surface);border:1px solid var(--outline);color:var(--fg);font-size:.9rem;font-weight:500;cursor:pointer;transition:all .15s}
+  .chip:hover{background:var(--surface-3)}
+  .chip.active{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
+  .chip .material-symbols-rounded{font-size:18px}
+
+  .section-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap}
+  .section-head h2{margin:0;font-size:1.5rem;font-weight:700;display:flex;align-items:center;gap:10px}
+  .section-head h2 .material-symbols-rounded{color:var(--primary)}
+  .muted{color:var(--muted)} .small{font-size:.88rem}
+
+  .grid{display:grid;gap:20px;grid-template-columns:repeat(auto-fill,minmax(270px,1fr))}
+  .perf-card{background:var(--surface);border:1px solid var(--outline-soft);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow-1);transition:transform .18s,box-shadow .18s;display:flex;flex-direction:column;cursor:pointer}
+  .perf-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-3)}
+  .perf-cover{height:146px;position:relative;display:grid;place-items:center;overflow:hidden}
+  .perf-cover .ph{font-size:3rem;font-weight:700;color:#fff}
+  .perf-featured{position:absolute;inset-block-start:12px;inset-inline-end:12px;background:var(--accent);color:#fff;padding:4px 11px;border-radius:var(--r-pill);font-size:.76rem;font-weight:600;display:inline-flex;gap:4px;align-items:center}
+  .perf-featured .material-symbols-rounded{font-size:15px}
+  .perf-body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:10px;flex:1}
+  .perf-name{font-size:1.16rem;font-weight:700;margin:0}
+  .perf-cats{display:flex;gap:6px;flex-wrap:wrap}
+  .tag{display:inline-flex;align-items:center;gap:4px;background:var(--surface-3);color:var(--muted);padding:4px 10px;border-radius:var(--r-pill);font-size:.8rem;font-weight:500}
+  .tag .material-symbols-rounded{font-size:15px}
+  .perf-meta{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:.9rem}
+  .perf-meta .material-symbols-rounded{font-size:18px}
+  .perf-foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:6px}
+  .free-pill{display:inline-flex;align-items:center;gap:5px;background:var(--success-bg);color:var(--success);padding:5px 11px;border-radius:var(--r-pill);font-size:.82rem;font-weight:600}
+  .free-pill .material-symbols-rounded{font-size:16px}
+
+  .avatar{border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;flex-shrink:0}
+
+  /* profile view */
+  .profile-head{display:flex;gap:24px;align-items:center;flex-wrap:wrap}
+  .profile-head .avatar{width:112px;height:112px;font-size:2.4rem;box-shadow:var(--shadow-2)}
+  .profile-head h1{margin:0 0 8px;font-size:1.9rem}
+  .two-col{display:grid;grid-template-columns:1.6fr 1fr;gap:26px;align-items:start}
+  @media (max-width:860px){.two-col{grid-template-columns:1fr}}
+  .contact-list{display:flex;flex-direction:column;gap:12px}
+  .contact-list a,.contact-list .ci{display:flex;align-items:center;gap:12px;color:var(--fg)}
+  .contact-list .material-symbols-rounded{width:40px;height:40px;border-radius:12px;background:var(--primary-container);color:var(--on-primary-container);display:grid;place-items:center;font-size:22px}
+
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;font-size:.85rem}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend .sw{width:14px;height:14px;border-radius:4px}
+  .cal-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:22px}
+  .cal{background:var(--surface-2);border:1px solid var(--outline-soft);border-radius:var(--r-lg);padding:16px}
+  .cal h3{margin:0 0 12px;font-size:1.05rem;text-align:center}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+  .cal-dow{text-align:center;font-size:.72rem;color:var(--muted);font-weight:600;padding-bottom:4px}
+  .cal-cell{aspect-ratio:1}
+  .cal-day{width:100%;height:100%;border-radius:11px;border:1px solid var(--outline-soft);background:var(--surface);display:grid;place-items:center;font-size:.9rem;font-weight:600;color:var(--fg)}
+  .cal-day.past{opacity:.35}
+  .cal-day.s-available{background:var(--success-bg);color:var(--success);border-color:transparent;cursor:pointer}
+  .cal-day.s-available:hover{transform:scale(1.06)}
+  .cal-day.s-booked{background:var(--info-bg);color:var(--info);border-color:transparent}
+
+  .field{margin-bottom:16px}
+  .field label{display:block;font-weight:600;font-size:.92rem;margin-bottom:7px}
+  .input,.textarea{width:100%;padding:12px 14px;font-family:inherit;font-size:1rem;border:1px solid var(--outline);border-radius:var(--r-md);background:var(--surface);color:var(--fg)}
+  .input:focus,.textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 22%,transparent)}
+  .textarea{resize:vertical;min-height:90px}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+  @media (max-width:560px){.form-grid{grid-template-columns:1fr}}
+
+  .flash{display:flex;gap:10px;align-items:center;background:var(--success-bg);color:var(--success);padding:13px 16px;border-radius:var(--r-md);font-weight:600;margin-bottom:16px}
+
+  .footer{border-top:1px solid var(--outline-soft);background:var(--surface);padding:24px 0;margin-top:40px}
+  .footer-inner{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:.9rem}
+  .note-banner{background:var(--primary-container);color:var(--on-primary-container);border-radius:var(--r-md);padding:12px 16px;font-size:.9rem;display:flex;gap:10px;align-items:flex-start}
+  .note-banner .material-symbols-rounded{flex-shrink:0}
+</style>
+</head>
+<body>
+<header class="appbar">
+  <div class="container appbar-inner">
+    <a href="#" onclick="showDirectory();return false" class="brand">
+      <span class="logo"><span class="material-symbols-rounded fill">music_note</span></span>
+      <span>Music Directory<small>Singers · Players · All music people</small></span>
+    </a>
+    <span class="preview-tag"><span class="material-symbols-rounded" style="font-size:16px">visibility</span> Live preview</span>
+    <button class="icon-btn" onclick="toggleTheme()" aria-label="Switch theme"><span class="material-symbols-rounded" id="theme-icon">dark_mode</span></button>
+  </div>
+</header>
+
+<main class="page">
+  <div class="container">
+
+    <!-- DIRECTORY VIEW -->
+    <div id="directory">
+      <section class="hero">
+        <span class="material-symbols-rounded hero-deco fill">graphic_eq</span>
+        <div class="hero-note"><span class="material-symbols-rounded" style="font-size:18px">verified</span> <span id="count">5</span> music people ready for you</div>
+        <h1>Find the right music for your event</h1>
+        <p>Singers, players, bands, cantors, entertainers and all music people — see when they are available, and book them right here in one place.</p>
+        <div class="searchbar">
+          <form onsubmit="return false">
+            <div class="search-field">
+              <span class="material-symbols-rounded">search</span>
+              <input type="text" id="q" placeholder="Search a name, a category, or a location…" oninput="render()" />
+            </div>
+            <button class="btn btn-accent" type="button" onclick="render()"><span class="material-symbols-rounded">search</span> Search</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="section-gap"><div class="chips" id="chips"></div></section>
+
+      <section class="section-gap">
+        <div class="section-head">
+          <h2><span class="material-symbols-rounded">library_music</span> <span id="headline">All music people</span></h2>
+          <div class="muted" id="resultcount"></div>
+        </div>
+        <div class="grid" id="grid"></div>
+      </section>
+    </div>
+
+    <!-- PROFILE VIEW -->
+    <div id="profile" hidden></div>
+
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="note-banner" style="margin-bottom:18px">
+      <span class="material-symbols-rounded">info</span>
+      <div>This is a visual preview of the website's look and flow. The full app — real logins, saved availability and bookings, and the admin panel — runs from the project code (Node.js + a database).</div>
+    </div>
+    <div class="footer-inner">
+      <div style="display:flex;align-items:center;gap:8px"><span class="material-symbols-rounded fill" style="color:var(--primary)">music_note</span> Music Directory — the place for all music people</div>
+      <div>© <span id="yr"></span> · All rights reserved</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // ---- theme ----
+  (function(){try{var s=localStorage.getItem('md-theme');if(s)document.documentElement.setAttribute('data-theme',s);}catch(e){}})();
+  function syncIcon(){var d=document.documentElement.getAttribute('data-theme');var dark=d==='dark'||(!d&&matchMedia('(prefers-color-scheme:dark)').matches);var el=document.getElementById('theme-icon');if(el)el.textContent=dark?'light_mode':'dark_mode';}
+  function toggleTheme(){var cur=document.documentElement.getAttribute('data-theme')==='dark'?'dark':(document.documentElement.getAttribute('data-theme')==='light'?'light':(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'));var next=cur==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',next);try{localStorage.setItem('md-theme',next);}catch(e){}syncIcon();}
+
+  document.getElementById('yr').textContent=new Date().getFullYear();
+
+  // ---- data ----
+  var CATS=[
+    {key:'singer',label:'Singer',icon:'mic'},{key:'musician',label:'Musician / Player',icon:'music_note'},
+    {key:'band',label:'Band',icon:'groups'},{key:'chazan',label:'Cantor',icon:'volume_up'},
+    {key:'badchen',label:'Entertainer',icon:'theater_comedy'},{key:'dj',label:'DJ',icon:'graphic_eq'},
+    {key:'keyboard',label:'Keyboard',icon:'piano'},{key:'violin',label:'Violin',icon:'music_note'},
+    {key:'guitar',label:'Guitar',icon:'music_note'},{key:'drums',label:'Drums',icon:'album'},
+    {key:'trumpet',label:'Trumpet / Horn',icon:'campaign'},{key:'choir',label:'Choir',icon:'diversity_3'},
+    {key:'conductor',label:'Conductor',icon:'podium'},{key:'producer',label:'Producer',icon:'tune'},
+    {key:'arranger',label:'Arranger',icon:'queue_music'},{key:'mc',label:'MC / Host',icon:'record_voice_over'}
+  ];
+  var CMAP={};CATS.forEach(function(c){CMAP[c.key]=c;});
+  var PEOPLE=[
+    {id:1,name:'Michael Weiss',cats:['singer','chazan'],bio:'A well-known singer and cantor for weddings and celebrations. Sings in a warm, heartfelt style.',phone:'718-555-0101',email:'michael@example.com',loc:'Brooklyn, NY',price:'$800',featured:true,avail:[2,3,5,9,12,16,20,23,27,30,34,40]},
+    {id:2,name:'The Harmony Band',cats:['band','musician','keyboard'],bio:'A full band with keyboard, violin, drums and horns. For every kind of event.',phone:'845-555-0147',email:'booking@harmonyband.example',loc:'Monsey, NY',price:'$2,500',featured:true,avail:[1,4,6,7,11,14,18,22,25,29,33]},
+    {id:3,name:'DJ Jake Black',cats:['dj','producer'],bio:'DJ and producer for modern events, with full lighting and sound.',phone:'347-555-0199',email:'jake@example.com',loc:'Williamsburg, NY',price:'$1,200',featured:false,avail:[3,8,10,15,19,24,28,31,38]},
+    {id:4,name:'Sam Green',cats:['violin','musician'],bio:'Violinist with over 15 years of experience. Solo or with a band.',phone:'718-555-0170',email:'sam@example.com',loc:'Flatbush, NY',price:'$600',featured:false,avail:[2,5,13,17,21,26,35,42]},
+    {id:5,name:'Barry Fried',cats:['badchen','mc'],bio:'A lively entertainer and master of ceremonies. Brings energy to every celebration.',phone:'845-555-0122',email:'barry@example.com',loc:'Kiryas Joel, NY',price:'$1,000',featured:false,avail:[1,6,9,14,20,27,33,41]}
+  ];
+
+  var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var DOWS=['S','M','T','W','T','F','S'];
+  function hue(s){var h=0;for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%360;return h;}
+  function initials(n){var p=n.trim().split(/\s+/);return (p.length===1?p[0].slice(0,2):(p[0][0]+(p[1]?p[1][0]:''))).toUpperCase();}
+  function iso(d){return d.toISOString().slice(0,10);}
+  function availSet(p){var s={};var base=new Date();base.setHours(0,0,0,0);p.avail.forEach(function(o){var d=new Date(base.getTime()+o*86400000);s[iso(d)]='available';});return s;}
+
+  var state={cat:'',q:''};
+
+  function renderChips(){
+    var html='<div class="chip '+(!state.cat?'active':'')+'" onclick="setCat(\'\')"><span class="material-symbols-rounded">apps</span> All</div>';
+    CATS.forEach(function(c){html+='<div class="chip '+(state.cat===c.key?'active':'')+'" onclick="setCat(\''+c.key+'\')"><span class="material-symbols-rounded">'+c.icon+'</span> '+c.label+'</div>';});
+    document.getElementById('chips').innerHTML=html;
+  }
+  function setCat(k){state.cat=k;render();}
+
+  function render(){
+    state.q=document.getElementById('q').value.toLowerCase().trim();
+    renderChips();
+    var list=PEOPLE.filter(function(p){
+      if(state.cat&&p.cats.indexOf(state.cat)===-1)return false;
+      if(state.q){var hay=(p.name+' '+p.bio+' '+p.loc).toLowerCase();if(hay.indexOf(state.q)===-1)return false;}
+      return true;
+    }).sort(function(a,b){return (b.featured?1:0)-(a.featured?1:0);});
+    document.getElementById('headline').textContent=state.cat?(CMAP[state.cat].label+'s'):'All music people';
+    document.getElementById('resultcount').textContent=list.length+' result'+(list.length===1?'':'s')+(state.q?' for "'+state.q+'"':'');
+    var g=document.getElementById('grid');
+    if(!list.length){g.innerHTML='<div class="card card-pad" style="text-align:center;color:var(--muted);grid-column:1/-1;padding:46px"><span class="material-symbols-rounded" style="font-size:52px;opacity:.4">search_off</span><p>No music people found. Try a different search.</p></div>';return;}
+    g.innerHTML=list.map(function(p){
+      var h1=hue(p.name),h2=(h1+40)%360;
+      var cats=p.cats.slice(0,3).map(function(k){return '<span class="tag"><span class="material-symbols-rounded">'+CMAP[k].icon+'</span> '+CMAP[k].label+'</span>';}).join('');
+      return '<div class="perf-card" onclick="openProfile('+p.id+')">'+
+        '<div class="perf-cover" style="background:linear-gradient(135deg,hsl('+h1+',60%,58%),hsl('+h2+',60%,48%))">'+
+        '<span class="ph">'+initials(p.name)+'</span>'+
+        (p.featured?'<span class="perf-featured"><span class="material-symbols-rounded fill">star</span> Featured</span>':'')+'</div>'+
+        '<div class="perf-body"><h3 class="perf-name">'+p.name+'</h3><div class="perf-cats">'+cats+'</div>'+
+        '<div class="perf-meta"><span class="material-symbols-rounded">location_on</span> '+p.loc+'</div>'+
+        '<div class="perf-foot"><span class="free-pill"><span class="material-symbols-rounded">event_available</span> '+p.avail.length+' free days</span>'+
+        '<span class="btn btn-tonal btn-sm">Profile <span class="material-symbols-rounded">arrow_forward</span></span></div></div></div>';
+    }).join('');
+  }
+
+  function calHtml(p){
+    var set=availSet(p);var today=new Date();today.setHours(0,0,0,0);var tIso=iso(today);
+    var out='';
+    for(var mi=0;mi<2;mi++){
+      var first=new Date(today.getFullYear(),today.getMonth()+mi,1);
+      var y=first.getFullYear(),m=first.getMonth();
+      var dim=new Date(y,m+1,0).getDate();var lead=first.getDay();
+      var cells='';for(var i=0;i<lead;i++)cells+='<div class="cal-cell"></div>';
+      for(var d=1;d<=dim;d++){
+        var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+        var past=ds<tIso;var st=set[ds];
+        var cls='cal-day'+(past?' past':'')+(st==='available'&&!past?' s-available':'');
+        var click=(st==='available'&&!past)?' onclick="pickDate(\''+ds+'\')"':'';
+        cells+='<div class="cal-cell"><div class="'+cls+'"'+click+'>'+d+'</div></div>';
+      }
+      out+='<div class="cal"><h3>'+MONTHS[m]+' '+y+'</h3><div class="cal-grid">'+DOWS.map(function(w){return '<div class="cal-dow">'+w+'</div>';}).join('')+cells+'</div></div>';
+    }
+    return out;
+  }
+
+  function openProfile(id){
+    var p=PEOPLE.find(function(x){return x.id===id;});if(!p)return;
+    var h1=hue(p.name);
+    var cats=p.cats.map(function(k){return '<span class="tag"><span class="material-symbols-rounded">'+CMAP[k].icon+'</span> '+CMAP[k].label+'</span>';}).join('');
+    var el=document.getElementById('profile');
+    el.innerHTML=
+      '<a href="#" onclick="showDirectory();return false" class="btn btn-ghost btn-sm" style="margin-bottom:16px"><span class="material-symbols-rounded">arrow_back</span> Back to the directory</a>'+
+      '<section class="card card-pad"><div class="profile-head">'+
+        '<div class="avatar" style="background:hsl('+h1+',55%,55%)">'+initials(p.name)+'</div>'+
+        '<div style="flex:1;min-width:240px"><h1>'+p.name+'</h1><div class="perf-cats">'+cats+'</div>'+
+        '<div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:12px" class="muted">'+
+        '<span style="display:inline-flex;gap:6px;align-items:center"><span class="material-symbols-rounded">location_on</span>'+p.loc+'</span>'+
+        '<span style="display:inline-flex;gap:6px;align-items:center"><span class="material-symbols-rounded">payments</span>From '+p.price+'</span></div></div>'+
+        '<a href="#book" class="btn btn-accent"><span class="material-symbols-rounded">event</span> Book now</a></div></section>'+
+      '<div class="two-col section-gap"><div>'+
+        '<section class="card card-pad"><div class="section-head" style="margin-bottom:10px"><h2 style="font-size:1.2rem"><span class="material-symbols-rounded">info</span> About</h2></div><p style="margin:0">'+p.bio+'</p></section>'+
+        '<section class="card card-pad section-gap"><div class="section-head" style="margin-bottom:10px"><h2 style="font-size:1.2rem"><span class="material-symbols-rounded">calendar_month</span> Availability</h2></div>'+
+          '<div class="legend"><span><span class="sw" style="background:var(--success-bg)"></span> Available</span><span><span class="sw" style="background:var(--info-bg)"></span> Booked</span></div>'+
+          '<div class="cal-wrap">'+calHtml(p)+'</div>'+
+          '<p class="small muted" style="margin-top:14px"><span class="material-symbols-rounded" style="font-size:16px;vertical-align:-3px">touch_app</span> Click a green day to add it to your booking request.</p></section>'+
+      '</div><aside>'+
+        '<section class="card card-pad"><div class="section-head" style="margin-bottom:10px"><h2 style="font-size:1.2rem"><span class="material-symbols-rounded">contacts</span> Get in touch</h2></div>'+
+          '<div class="contact-list"><div class="ci"><span class="material-symbols-rounded">call</span> <span style="user-select:all">'+p.phone+'</span></div>'+
+          '<div class="ci"><span class="material-symbols-rounded">mail</span> <span style="user-select:all">'+p.email+'</span></div></div></section>'+
+        '<section class="card card-pad section-gap" id="book"><div class="section-head" style="margin-bottom:10px"><h2 style="font-size:1.2rem"><span class="material-symbols-rounded">event</span> Book / Request</h2></div>'+
+          '<div id="bookmsg"></div>'+
+          '<form onsubmit="return submitBooking(event)">'+
+          '<div class="field"><label>Your name *</label><input class="input" id="bk-name" required></div>'+
+          '<div class="form-grid"><div class="field"><label>Phone</label><input class="input" type="tel"></div><div class="field"><label>Email</label><input class="input" type="email"></div></div>'+
+          '<div class="form-grid"><div class="field"><label>Event date *</label><input class="input" type="date" id="bk-date" required></div><div class="field"><label>Event type</label><input class="input" placeholder="Wedding, party…"></div></div>'+
+          '<div class="field"><label>A note</label><textarea class="textarea" placeholder="Tell them what you need…"></textarea></div>'+
+          '<button class="btn btn-accent btn-block" type="submit"><span class="material-symbols-rounded">send</span> Send request</button>'+
+          '<p class="small muted" style="margin-top:10px">Preview only — requests are not actually sent here.</p></form></section>'+
+      '</aside></div>';
+    document.getElementById('directory').hidden=true;
+    el.hidden=false;
+    window.scrollTo(0,0);
+  }
+  function showDirectory(){document.getElementById('profile').hidden=true;document.getElementById('directory').hidden=false;window.scrollTo(0,0);}
+  function pickDate(ds){var i=document.getElementById('bk-date');if(i){i.value=ds;document.getElementById('book').scrollIntoView({behavior:'smooth'});}}
+  function submitBooking(e){e.preventDefault();var n=document.getElementById('bk-name').value||'your';var d=document.getElementById('bk-date').value;document.getElementById('bookmsg').innerHTML='<div class="flash"><span class="material-symbols-rounded">check_circle</span> Thanks '+n+'! In the real app this request would be sent'+(d?' for '+d:'')+'.</div>';e.target.reset();return false;}
+
+  syncIcon();render();
+</script>
+</body>
+</html>
