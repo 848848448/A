@@ -1,0 +1,31 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+
+<main class="auth-wrap">
+  <div class="auth-card card card-pad">
+    <div class="auth-logo"><span class="material-symbols-rounded fill">music_note</span></div>
+    <h1 style="text-align:center;margin:0 0 6px;font-size:1.6rem">אַרײַנלאָגירן</h1>
+    <p class="muted" style="text-align:center;margin:0 0 20px">צוקומען צו דײַן פּראָפֿיל, לוח און באַשטעלונגען</p>
+
+    <form action="/auth/login" method="post">
+      <% if (next) { %><input type="hidden" name="next" value="<%= next %>" /><% } %>
+      <div class="field">
+        <label>בליץ-פּאָסט</label>
+        <input class="input" type="email" name="email" required autofocus placeholder="name@example.com" />
+      </div>
+      <div class="field">
+        <label>פּאַסווערד</label>
+        <input class="input" type="password" name="password" required />
+      </div>
+      <button class="btn btn-primary btn-block" type="submit"><span class="material-symbols-rounded">login</span> אַרײַן</button>
+    </form>
+
+    <div class="divider"></div>
+    <p class="muted small" style="text-align:center;margin:0">
+      <span class="material-symbols-rounded" style="font-size:16px;vertical-align:-3px">info</span>
+      האָסט נאָך נישט קיין אַקאונט? דער אַדמיניסטראַטאָר עפֿנט פֿאַר דיר איינעם.
+    </p>
+  </div>
+</main>
+
+<%- include('partials/footer') %>

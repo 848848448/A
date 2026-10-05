@@ -1,0 +1,99 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+<% var DOWS = ['ז','מ','ד','מ','ד','פֿ','ש']; %>
+
+<main class="page">
+  <div class="container">
+    <div class="dash">
+      <%- include('../partials/dashnav', { active: 'availability' }) %>
+      <div>
+        <div class="section-head"><h2><span class="material-symbols-rounded">calendar_month</span> ווען בין איך פֿריי</h2></div>
+
+        <div class="card card-pad" style="margin-bottom:20px">
+          <div class="legend" style="margin-bottom:14px">
+            <span><span class="sw" style="background:var(--success-bg)"></span> פֿריי</span>
+            <span><span class="sw" style="background:var(--danger-bg)"></span> פֿאַרנומען</span>
+            <span><span class="sw" style="background:var(--info-bg)"></span> פֿאַרבאַקט</span>
+            <span><span class="sw" style="background:var(--surface-2);border:1px solid var(--outline)"></span> נישט געמאַרקירט</span>
+          </div>
+          <p class="muted small" style="margin:0"><span class="material-symbols-rounded" style="font-size:16px;vertical-align:-3px">touch_app</span> קלאַפּ אויף אַ טאָג כּדי אים צו מאַרקירן ווי פֿריי אָדער פֿאַרנומען.</p>
+        </div>
+
+        <!-- bulk range -->
+        <details class="card card-pad" style="margin-bottom:20px">
+          <summary style="cursor:pointer;font-weight:600"><span class="material-symbols-rounded" style="vertical-align:-5px;color:var(--primary)">date_range</span> מאַרקיר אַ גאַנצע תקופה אויף איין מאָל</summary>
+          <form action="/dashboard/availability/bulk" method="post" style="margin-top:16px">
+            <div class="form-grid">
+              <div class="field"><label>פֿון</label><input class="input" type="date" name="from" required /></div>
+              <div class="field"><label>ביז</label><input class="input" type="date" name="to" required /></div>
+            </div>
+            <div class="field">
+              <label>מאַרקיר ווי</label>
+              <select class="input" name="status">
+                <option value="available">פֿריי</option>
+                <option value="unavailable">פֿאַרנומען</option>
+              </select>
+            </div>
+            <button class="btn btn-tonal" type="submit"><span class="material-symbols-rounded">done_all</span> מאַרקיר</button>
+          </form>
+        </details>
+
+        <div class="cal-wrap">
+          <% months.forEach(function(m){ var lead = new Date(m.year, m.month, 1).getDay(); %>
+            <div class="cal">
+              <h3><%= h.MONTHS[m.month] %> <%= m.year %></h3>
+              <div class="cal-grid">
+                <% DOWS.forEach(function(w){ %><div class="cal-dow"><%= w %></div><% }) %>
+                <% m.cells.forEach(function(cell){ %>
+                  <% if (!cell) { %><div class="cal-cell"></div><% } else {
+                       var st = cell.info ? cell.info.status : null;
+                       var note = cell.info ? (cell.info.note || '') : '';
+                       var cls = st ? 's-' + st : '';
+                  %>
+                    <div class="cal-cell">
+                      <div class="cal-day <%= cls %> <%= cell.past ? 'past' : '' %>"
+                           <% if (!cell.past) { %>onclick="openDay('<%= cell.iso %>','<%= st || '' %>','<%= note.replace(/'/g, "\\'") %>')"<% } %>>
+                        <%= cell.d %>
+                      </div>
+                    </div>
+                  <% } %>
+                <% }) %>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- day editor dialog -->
+<dialog id="dayDialog">
+  <form action="/dashboard/availability" method="post">
+    <div class="dialog-head">
+      <strong>טאָג: <span id="dlg-date-label"></span></strong>
+      <button type="button" class="icon-btn" onclick="closeDay()"><span class="material-symbols-rounded">close</span></button>
+    </div>
+    <div class="dialog-body">
+      <input type="hidden" name="date" id="dlg-date" />
+      <div class="field">
+        <label>סטאַטוס</label>
+        <select class="input" name="status" id="dlg-status">
+          <option value="available">פֿריי — גרייט צו באַקן</option>
+          <option value="unavailable">פֿאַרנומען</option>
+          <option value="booked">פֿאַרבאַקט</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>אַ נאָטיץ (אַפּציאָנעל)</label>
+        <input class="input" type="text" name="note" id="dlg-note" placeholder="חתונה ב…, פֿרײַ נאָך 9…" />
+      </div>
+    </div>
+    <div class="dialog-foot">
+      <button class="btn btn-primary" type="submit"><span class="material-symbols-rounded">save</span> אָפּהיטן</button>
+      <button class="btn btn-danger" type="submit" name="clear" value="1"><span class="material-symbols-rounded">delete</span> רייניק</button>
+    </div>
+  </form>
+</dialog>
+
+<%- include('../partials/footer') %>

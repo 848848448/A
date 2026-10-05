@@ -1,0 +1,11 @@
+<%
+  var _size = typeof size !== 'undefined' ? size : 48;
+  var _hue = h.colorFromString(name || '');
+%>
+<div class="avatar" style="width:<%= _size %>px;height:<%= _size %>px;font-size:<%= Math.round(_size*0.4) %>px;background:hsl(<%= _hue %>,55%,55%)">
+  <% if (photo) { %>
+    <img src="<%= photo %>" alt="<%= name %>" />
+  <% } else { %>
+    <%= h.initials(name) %>
+  <% } %>
+</div>

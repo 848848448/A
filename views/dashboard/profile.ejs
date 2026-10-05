@@ -1,0 +1,76 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+<% var myCats = performer.categories ? performer.categories.split(',') : []; %>
+
+<main class="page">
+  <div class="container">
+    <div class="dash">
+      <%- include('../partials/dashnav', { active: 'profile' }) %>
+      <div>
+        <div class="section-head"><h2><span class="material-symbols-rounded">badge</span> מײַן פּראָפֿיל</h2></div>
+
+        <form action="/dashboard/profile" method="post" enctype="multipart/form-data">
+          <section class="card card-pad">
+            <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+              <%- include('../partials/avatar', { name: performer.display_name, photo: performer.photo, size: 88 }) %>
+              <div style="flex:1;min-width:220px">
+                <div class="field" style="margin-bottom:10px">
+                  <label>אַ בילד אַרויפֿלייגן</label>
+                  <input class="input" type="file" name="photo_file" accept="image/*" />
+                  <div class="hint">אָדער גיב אַ לינק פֿון אַ בילד:</div>
+                </div>
+                <input class="input" type="url" name="photo_url" placeholder="https://…" value="<%= (performer.photo && performer.photo.indexOf('/uploads/') !== 0) ? performer.photo : '' %>" />
+              </div>
+            </div>
+          </section>
+
+          <section class="card card-pad section-gap">
+            <div class="field" style="background:var(--surface-sunken);padding:14px 16px;border-radius:var(--radius-md);margin-bottom:22px">
+              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin:0">
+                <input type="checkbox" name="visible" value="1" <%= performer.active ? 'checked' : '' %> style="width:20px;height:20px;accent-color:var(--primary)" />
+                <span class="material-symbols-rounded" style="color:var(--primary)">public</span>
+                ווײַז מיך אין דער עפֿנטלעכער דירעקטאריע (מענטשן קענען מיך זען און באַקן)
+              </label>
+            </div>
+
+            <div class="field">
+              <label>נאָמען (אַזוי ווי מענטשן זעען דיך) *</label>
+              <input class="input" type="text" name="display_name" value="<%= performer.display_name %>" required />
+            </div>
+
+            <div class="field">
+              <label>וואָס טוסטו? (קען קלײַבן מער ווי איינס)</label>
+              <div class="cat-select">
+                <% categories.forEach(function(c){ %>
+                  <label>
+                    <input type="checkbox" name="categories" value="<%= c.key %>" <%= myCats.indexOf(c.key) !== -1 ? 'checked' : '' %> />
+                    <span class="material-symbols-rounded"><%= c.icon %></span> <%= c.label %>
+                  </label>
+                <% }) %>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>אַ באַשרײַבונג וועגן דיר</label>
+              <textarea class="textarea" name="bio" placeholder="דערצייל וועגן זיך, דײַן סטיל, דײַן דערפֿאַרונג…"><%= performer.bio %></textarea>
+            </div>
+
+            <div class="form-grid">
+              <div class="field"><label>טעלעפֿאָן</label><input class="input" type="tel" name="phone" value="<%= performer.phone %>" /></div>
+              <div class="field"><label>בליץ-פּאָסט (עפֿנטלעך)</label><input class="input" type="email" name="public_email" value="<%= performer.public_email %>" /></div>
+            </div>
+            <div class="form-grid">
+              <div class="field"><label>וועבזײַטל</label><input class="input" type="url" name="website" value="<%= performer.website %>" placeholder="https://…" /></div>
+              <div class="field"><label>אָרט / געגנט</label><input class="input" type="text" name="location" value="<%= performer.location %>" placeholder="בארא פארק, מאנסי…" /></div>
+            </div>
+            <div class="field"><label>פּרײַז פֿון (אַפּציאָנעל)</label><input class="input" type="text" name="price_from" value="<%= performer.price_from %>" placeholder="$500" /></div>
+
+            <button class="btn btn-primary" type="submit"><span class="material-symbols-rounded">save</span> אָפּהיטן</button>
+          </section>
+        </form>
+      </div>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>

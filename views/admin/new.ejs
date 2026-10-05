@@ -1,0 +1,51 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+
+<main class="page">
+  <div class="container" style="max-width:760px">
+    <a href="/admin" class="btn btn-ghost btn-sm" style="margin-bottom:12px"><span class="material-symbols-rounded">arrow_forward</span> צוריק צום אַדמין</a>
+    <div class="section-head"><h2><span class="material-symbols-rounded">person_add</span> עפֿן נײַעם אַקאונט</h2></div>
+
+    <form action="/admin/new" method="post">
+      <section class="card card-pad">
+        <div class="form-grid">
+          <div class="field"><label>פֿולער נאָמען *</label><input class="input" type="text" name="name" required /></div>
+          <div class="field"><label>נאָמען אויפֿן פּראָפֿיל</label><input class="input" type="text" name="display_name" placeholder="לאָז ליידיק = זעלבער נאָמען" /></div>
+        </div>
+        <div class="form-grid">
+          <div class="field"><label>בליץ-פּאָסט (צום אַרײַנלאָגירן) *</label><input class="input" type="email" name="email" required /></div>
+          <div class="field">
+            <label>אָנהייב-פּאַסווערד *</label>
+            <input class="input" type="text" name="password" value="<%= generated %>" required />
+            <div class="hint">דער מענטש קען עס שפּעטער בײַטן. גיב עס איבער צו אים.</div>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="field"><label>טעלעפֿאָן</label><input class="input" type="tel" name="phone" /></div>
+          <div class="field"><label>אָרט / געגנט</label><input class="input" type="text" name="location" /></div>
+        </div>
+
+        <div class="field">
+          <label>וואָס טוט ער?</label>
+          <div class="cat-select">
+            <% categories.forEach(function(c){ %>
+              <label><input type="checkbox" name="categories" value="<%= c.key %>" /><span class="material-symbols-rounded"><%= c.icon %></span> <%= c.label %></label>
+            <% }) %>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>מין אַקאונט</label>
+          <select class="input" name="role">
+            <option value="performer">מוזיק מענטש (קען ריכטן זײַן פּראָפֿיל און באַשטעלונגען)</option>
+            <option value="admin">אַדמיניסטראַטאָר (קען אַלץ פֿאַרוואַלטן)</option>
+          </select>
+        </div>
+
+        <button class="btn btn-primary" type="submit"><span class="material-symbols-rounded">check</span> עפֿן אַקאונט</button>
+      </section>
+    </form>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
