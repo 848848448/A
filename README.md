@@ -8,6 +8,13 @@ their own profile, set their availability, and handle their bookings.
 The interface is in English and uses Google's **Material Symbols** icon set and a
 Material-inspired design, in both light and dark themes.
 
+## Deploy it for real (Cloudflare)
+
+To run the full app online — with real logins, saved bookings, and the admin panel — there's a
+Cloudflare version in [`cloudflare/`](cloudflare/) (Cloudflare Workers + D1 + R2). It runs on
+Cloudflare's free tier (no credit card needed). See [`cloudflare/README.md`](cloudflare/README.md)
+for step-by-step deploy instructions.
+
 ## Live preview
 
 A static, browsable preview of the site is published via GitHub Pages:

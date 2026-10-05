@@ -1,0 +1,26 @@
+name = "muzik-direktorie"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# Static assets (CSS, JS, fonts) are served from ./public automatically.
+# Any request that does not match a static file falls through to the Worker.
+assets = { directory = "./public", binding = "ASSETS" }
+
+# D1 database (SQLite-compatible). Create it with:
+#   wrangler d1 create muzik-db
+# then paste the printed database_id below.
+[[d1_databases]]
+binding = "DB"
+database_name = "muzik-db"
+database_id = "00000000-0000-0000-0000-000000000000"  # REPLACE with your real D1 database_id before deploying
+
+# R2 bucket for uploaded profile photos. Create it with:
+#   wrangler r2 bucket create muzik-uploads
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "muzik-uploads"
+
+[vars]
+# Change this to any long random string in production (or set as a secret).
+SESSION_SECRET = "change-me-to-a-long-random-string"
