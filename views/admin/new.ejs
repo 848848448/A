@@ -3,30 +3,30 @@
 
 <main class="page">
   <div class="container" style="max-width:760px">
-    <a href="/admin" class="btn btn-ghost btn-sm" style="margin-bottom:12px"><span class="material-symbols-rounded">arrow_forward</span> צוריק צום אַדמין</a>
-    <div class="section-head"><h2><span class="material-symbols-rounded">person_add</span> עפֿן נײַעם אַקאונט</h2></div>
+    <a href="/admin" class="btn btn-ghost btn-sm" style="margin-bottom:12px"><span class="material-symbols-rounded">arrow_back</span> Back to admin</a>
+    <div class="section-head"><h2><span class="material-symbols-rounded">person_add</span> Open new account</h2></div>
 
     <form action="/admin/new" method="post">
       <section class="card card-pad">
         <div class="form-grid">
-          <div class="field"><label>פֿולער נאָמען *</label><input class="input" type="text" name="name" required /></div>
-          <div class="field"><label>נאָמען אויפֿן פּראָפֿיל</label><input class="input" type="text" name="display_name" placeholder="לאָז ליידיק = זעלבער נאָמען" /></div>
+          <div class="field"><label>Full name *</label><input class="input" type="text" name="name" required /></div>
+          <div class="field"><label>Name on profile</label><input class="input" type="text" name="display_name" placeholder="Leave empty = same name" /></div>
         </div>
         <div class="form-grid">
-          <div class="field"><label>בליץ-פּאָסט (צום אַרײַנלאָגירן) *</label><input class="input" type="email" name="email" required /></div>
+          <div class="field"><label>Email (to log in) *</label><input class="input" type="email" name="email" required /></div>
           <div class="field">
-            <label>אָנהייב-פּאַסווערד *</label>
+            <label>Starting password *</label>
             <input class="input" type="text" name="password" value="<%= generated %>" required />
-            <div class="hint">דער מענטש קען עס שפּעטער בײַטן. גיב עס איבער צו אים.</div>
+            <div class="hint">The person can change it later. Pass it along to them.</div>
           </div>
         </div>
         <div class="form-grid">
-          <div class="field"><label>טעלעפֿאָן</label><input class="input" type="tel" name="phone" /></div>
-          <div class="field"><label>אָרט / געגנט</label><input class="input" type="text" name="location" /></div>
+          <div class="field"><label>Phone</label><input class="input" type="tel" name="phone" /></div>
+          <div class="field"><label>Location / area</label><input class="input" type="text" name="location" /></div>
         </div>
 
         <div class="field">
-          <label>וואָס טוט ער?</label>
+          <label>What do they do?</label>
           <div class="cat-select">
             <% categories.forEach(function(c){ %>
               <label><input type="checkbox" name="categories" value="<%= c.key %>" /><span class="material-symbols-rounded"><%= c.icon %></span> <%= c.label %></label>
@@ -35,14 +35,14 @@
         </div>
 
         <div class="field">
-          <label>מין אַקאונט</label>
+          <label>Account type</label>
           <select class="input" name="role">
-            <option value="performer">מוזיק מענטש (קען ריכטן זײַן פּראָפֿיל און באַשטעלונגען)</option>
-            <option value="admin">אַדמיניסטראַטאָר (קען אַלץ פֿאַרוואַלטן)</option>
+            <option value="performer">Music person (can edit their profile and bookings)</option>
+            <option value="admin">Administrator (can manage everything)</option>
           </select>
         </div>
 
-        <button class="btn btn-primary" type="submit"><span class="material-symbols-rounded">check</span> עפֿן אַקאונט</button>
+        <button class="btn btn-primary" type="submit"><span class="material-symbols-rounded">check</span> Create account</button>
       </section>
     </form>
   </div>

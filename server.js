@@ -71,16 +71,16 @@ app.use('/admin', require('./routes/admin'));
 
 // 404
 app.use((req, res) => {
-  res.status(404).render('error', { title: 'נישט געפֿונען', code: 404, message: 'די זײַטל איז נישט געפֿונען געוואָרן.' });
+  res.status(404).render('error', { title: 'Not found', code: 404, message: 'This page could not be found.' });
 });
 
 // Error handler
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   console.error(err);
-  res.status(500).render('error', { title: 'אַ טעות', code: 500, message: 'עפּעס איז שיעף געגאַנגען. פּרוביר נאָכאַמאָל.' });
+  res.status(500).render('error', { title: 'Error', code: 500, message: 'Something went wrong. Please try again.' });
 });
 
 app.listen(PORT, () => {
-  console.log(`\n  ♪  מוזיק־דירעקטאריע לויפֿט אויף  http://localhost:${PORT}\n`);
+  console.log(`\n  ♪  Music Directory is running at  http://localhost:${PORT}\n`);
 });

@@ -1,15 +1,12 @@
-# 🎵 מוזיק־דירעקטאריע — Music Directory & Booking
-
-אַ וועבזײַטל וווּ מען קען זען און פֿאַרבינדן זיך מיט זינגערס, שפּילער, קאַפּעליעס, חזנים, בדחנים
-און אַלע מוזיק מענטשן — זען ווען זיי זענען פֿריי, און זיי באַקן גלײַך דאָ.
+# 🎵 Music Directory & Booking
 
 A full-stack directory and booking website for singers, musicians, bands and every kind of
 music person. The public can browse profiles, see each performer's availability calendar, and
 send booking requests. An administrator opens accounts for people; each person logs in to manage
 their own profile, set their availability, and handle their bookings.
 
-The whole interface is in Yiddish (right-to-left) and uses Google's **Material Symbols** icon
-set and a Material-inspired design, in both light and dark themes.
+The interface is in English and uses Google's **Material Symbols** icon set and a
+Material-inspired design, in both light and dark themes.
 
 ---
 
@@ -46,7 +43,7 @@ set and a Material-inspired design, in both light and dark themes.
 - **bcryptjs** — password hashing
 - **EJS** — server-rendered templates
 - **multer** — profile photo uploads
-- **Self-hosted fonts** — Rubik (Hebrew + Latin) and Material Symbols Rounded, served locally
+- **Self-hosted fonts** — Rubik and Material Symbols Rounded, served locally
   from `public/fonts/` so the site works even without internet access to Google Fonts.
 
 No build step. No external API keys.
@@ -70,7 +67,7 @@ Then open **http://localhost:3000**.
 | Admin     | `avrumypolatsek@gmail.com`   | `admin1234`  |
 | Performer | `meir@example.com` (and others) | `muzik123` |
 
-> Change the admin password after the first login (Dashboard → אײַנשטעלונגען), or seed with your
+> Change the admin password after the first login (Dashboard → Settings), or seed with your
 > own values: `ADMIN_EMAIL=... ADMIN_PASSWORD=... npm run seed`.
 
 The port can be changed with the `PORT` environment variable, and the session secret with

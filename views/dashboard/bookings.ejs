@@ -6,10 +6,10 @@
     <div class="dash">
       <%- include('../partials/dashnav', { active: 'bookings' }) %>
       <div>
-        <div class="section-head"><h2><span class="material-symbols-rounded">event</span> באַשטעלונגען</h2></div>
+        <div class="section-head"><h2><span class="material-symbols-rounded">event</span> Bookings</h2></div>
 
         <div class="chips" style="margin-bottom:20px">
-          <% var filters = [['all','אַלע','list'],['pending','וואַרטנדיק','schedule'],['accepted','באַשטעטיקט','check_circle'],['declined','אָפּגעזאָגט','cancel']]; %>
+          <% var filters = [['all','All','list'],['pending','Pending','schedule'],['accepted','Confirmed','check_circle'],['declined','Declined','cancel']]; %>
           <% filters.forEach(function(f){ %>
             <a href="/dashboard/bookings<%= f[0]==='all' ? '' : '?status='+f[0] %>" class="chip <%= filter === f[0] ? 'active' : '' %>">
               <span class="material-symbols-rounded"><%= f[2] %></span> <%= f[1] %>
@@ -18,7 +18,7 @@
         </div>
 
         <% if (bookings.length === 0) { %>
-          <div class="card card-pad empty"><span class="material-symbols-rounded">inbox</span><p>קיין באַשטעלונגען דאָ.</p></div>
+          <div class="card card-pad empty"><span class="material-symbols-rounded">inbox</span><p>No bookings here.</p></div>
         <% } else { %>
           <div class="list">
             <% bookings.forEach(function(b){ var st = constants.BOOKING_STATUS[b.status]; %>
@@ -41,9 +41,9 @@
                 </div>
                 <div class="row-actions">
                   <form action="/dashboard/bookings/<%= b.id %>" method="post" style="display:flex;gap:8px;flex-wrap:wrap">
-                    <% if (b.status !== 'accepted') { %><button class="btn btn-primary btn-sm" name="action" value="accept"><span class="material-symbols-rounded">check</span> באַשטעטיק</button><% } %>
-                    <% if (b.status !== 'declined') { %><button class="btn btn-ghost btn-sm" name="action" value="decline"><span class="material-symbols-rounded">block</span> זאָג אָפּ</button><% } %>
-                    <button class="btn btn-danger btn-sm" name="action" value="delete" onclick="return confirm('אויסמעקן די באַשטעלונג?')"><span class="material-symbols-rounded">delete</span></button>
+                    <% if (b.status !== 'accepted') { %><button class="btn btn-primary btn-sm" name="action" value="accept"><span class="material-symbols-rounded">check</span> Confirm</button><% } %>
+                    <% if (b.status !== 'declined') { %><button class="btn btn-ghost btn-sm" name="action" value="decline"><span class="material-symbols-rounded">block</span> Decline</button><% } %>
+                    <button class="btn btn-danger btn-sm" name="action" value="delete" onclick="return confirm('Delete this booking?')"><span class="material-symbols-rounded">delete</span></button>
                   </form>
                 </div>
               </div>

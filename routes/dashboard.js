@@ -65,13 +65,13 @@ router.get('/', (req, res) => {
   const upcoming = db
     .prepare("SELECT * FROM bookings WHERE performer_id = ? AND event_date >= ? ORDER BY event_date ASC LIMIT 5")
     .all(p.id, today);
-  res.render('dashboard/home', { title: 'דאַשבאָרד', performer: p, stats, upcoming });
+  res.render('dashboard/home', { title: 'Dashboard', performer: p, stats, upcoming });
 });
 
 // Profile edit form
 router.get('/profile', (req, res) => {
   const p = myPerformer(req.currentUser);
-  res.render('dashboard/profile', { title: 'מײַן פּראָפֿיל', performer: p, categories: CATEGORIES });
+  res.render('dashboard/profile', { title: 'My Profile', performer: p, categories: CATEGORIES });
 });
 
 router.post('/profile', upload.single('photo_file'), (req, res) => {
@@ -108,7 +108,7 @@ router.post('/profile', upload.single('photo_file'), (req, res) => {
     p.id
   );
 
-  req.session.flash = { type: 'success', msg: 'דײַן פּראָפֿיל איז אָפּגעהיט געוואָרן.' };
+  req.session.flash = { type: 'success', msg: 'Your profile has been saved.' };
   res.redirect('/dashboard/profile');
 });
 
@@ -138,7 +138,7 @@ router.get('/availability', (req, res) => {
     months.push({ year, month, cells });
   }
 
-  res.render('dashboard/availability', { title: 'ווען בין איך פֿריי', performer: p, months });
+  res.render('dashboard/availability', { title: 'Availability', performer: p, months });
 });
 
 // Toggle / set a single day's status (used by inline form)
@@ -149,7 +149,7 @@ router.post('/availability', (req, res) => {
   const note = String(req.body.note || '').trim();
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    req.session.flash = { type: 'error', msg: 'אומלעקסיקער טאָג.' };
+    req.session.flash = { type: 'error', msg: 'Invalid date.' };
     return res.redirect('/dashboard/availability');
   }
 
@@ -171,7 +171,7 @@ router.post('/availability/bulk', (req, res) => {
   const to = String(req.body.to || '').trim();
   const status = ['available', 'unavailable'].includes(req.body.status) ? req.body.status : 'available';
   if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || to < from) {
-    req.session.flash = { type: 'error', msg: 'אומלעקסיקער טאָג-געגנט.' };
+    req.session.flash = { type: 'error', msg: 'Invalid date range.' };
     return res.redirect('/dashboard/availability');
   }
   const stmt = db.prepare(
@@ -187,7 +187,7 @@ router.post('/availability/bulk', (req, res) => {
     }
   });
   tx();
-  req.session.flash = { type: 'success', msg: 'די טעג זענען געמאַרקירט געוואָרן.' };
+  req.session.flash = { type: 'success', msg: 'The days have been marked.' };
   res.redirect('/dashboard/availability');
 });
 
@@ -203,14 +203,14 @@ router.get('/bookings', (req, res) => {
   }
   sql += " ORDER BY CASE status WHEN 'pending' THEN 0 WHEN 'accepted' THEN 1 ELSE 2 END, event_date ASC";
   const bookings = db.prepare(sql).all(...params);
-  res.render('dashboard/bookings', { title: 'באַשטעלונגען', performer: p, bookings, filter });
+  res.render('dashboard/bookings', { title: 'Bookings', performer: p, bookings, filter });
 });
 
 router.post('/bookings/:id', (req, res) => {
   const p = myPerformer(req.currentUser);
   const booking = db.prepare('SELECT * FROM bookings WHERE id = ? AND performer_id = ?').get(req.params.id, p.id);
   if (!booking) {
-    req.session.flash = { type: 'error', msg: 'די באַשטעלונג איז נישט געפֿונען געוואָרן.' };
+    req.session.flash = { type: 'error', msg: 'Booking not found.' };
     return res.redirect('/dashboard/bookings');
   }
   const action = req.body.action;
@@ -221,20 +221,20 @@ router.post('/bookings/:id', (req, res) => {
       `INSERT INTO availability (performer_id, date, status, note) VALUES (?, ?, 'booked', ?)
        ON CONFLICT(performer_id, date) DO UPDATE SET status = 'booked'`
     ).run(p.id, booking.event_date, booking.event_type || '');
-    req.session.flash = { type: 'success', msg: 'די באַשטעלונג איז באַשטעטיקט געוואָרן.' };
+    req.session.flash = { type: 'success', msg: 'The booking has been confirmed.' };
   } else if (action === 'decline') {
     db.prepare("UPDATE bookings SET status = 'declined' WHERE id = ?").run(booking.id);
-    req.session.flash = { type: 'success', msg: 'די באַשטעלונג איז אָפּגעזאָגט געוואָרן.' };
+    req.session.flash = { type: 'success', msg: 'The booking has been declined.' };
   } else if (action === 'delete') {
     db.prepare('DELETE FROM bookings WHERE id = ?').run(booking.id);
-    req.session.flash = { type: 'success', msg: 'די באַשטעלונג איז אויסגעמעקט געוואָרן.' };
+    req.session.flash = { type: 'success', msg: 'The booking has been deleted.' };
   }
   res.redirect('/dashboard/bookings');
 });
 
 // Settings (password)
 router.get('/settings', (req, res) => {
-  res.render('dashboard/settings', { title: 'אײַנשטעלונגען' });
+  res.render('dashboard/settings', { title: 'Settings' });
 });
 
 module.exports = router;

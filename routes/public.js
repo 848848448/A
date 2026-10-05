@@ -47,7 +47,7 @@ router.get('/', (req, res) => {
   });
 
   res.render('index', {
-    title: 'מוזיק־דירעקטאריע',
+    title: 'Music Directory',
     performers: enriched,
     q,
     cat,
@@ -94,7 +94,7 @@ router.post('/p/:id/book', (req, res, next) => {
   const message = String(req.body.message || '').trim();
 
   if (!name || !eventDate || (!phone && !email)) {
-    req.session.flash = { type: 'error', msg: 'דאַרפֿסט אָנגעבן דעם נאָמען, אַ טאָג, און אַ וועג זיך צו פֿאַרבינדן (טעלעפֿאָן אָדער בליץ-פּאָסט).' };
+    req.session.flash = { type: 'error', msg: 'Please provide your name, a date, and a way to reach you (phone or email).' };
     return res.redirect('/p/' + performer.id + '#book');
   }
 
@@ -105,7 +105,7 @@ router.post('/p/:id/book', (req, res, next) => {
 
   req.session.flash = {
     type: 'success',
-    msg: `דײַן באַשטעלונג איז אַוועקגעשיקט געוואָרן צו ${performer.display_name}. מ'וועט זיך פֿאַרבינדן מיט דיר.`,
+    msg: `Your booking request was sent to ${performer.display_name}. They will get back to you.`,
   };
   res.redirect('/p/' + performer.id);
 });

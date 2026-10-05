@@ -9,7 +9,7 @@ const { todayISO } = require('./lib/helpers');
 
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'avrumypolatsek@gmail.com').toLowerCase();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin1234';
-const ADMIN_NAME = process.env.ADMIN_NAME || 'אַדמיניסטראַטאָר';
+const ADMIN_NAME = process.env.ADMIN_NAME || 'Administrator';
 
 function ensureUser(name, email, password, role) {
   email = email.toLowerCase();
@@ -65,38 +65,38 @@ const admin = ensureUser(ADMIN_NAME, ADMIN_EMAIL, ADMIN_PASSWORD, 'admin');
 // --- sample music people ---
 const samples = [
   {
-    name: 'מאיר ווייס', email: 'meir@example.com',
-    display_name: 'מאיר ווייס', categories: 'singer,chazan',
-    bio: 'אַ באַקאַנטער זינגער און חזן פֿאַר חתונות, שבע ברכות און גרויסע שׂמחות. זינגט אויף אַ וואַרעמען, הארציקן סטיל.',
-    phone: '718-555-0101', location: 'בארא פארק', price_from: '$800', featured: true,
+    name: 'Michael Weiss', email: 'meir@example.com',
+    display_name: 'Michael Weiss', categories: 'singer,chazan',
+    bio: 'A well-known singer and cantor for weddings and celebrations. Sings in a warm, heartfelt style.',
+    phone: '718-555-0101', location: 'Brooklyn, NY', price_from: '$800', featured: true,
     avail: [2, 3, 5, 9, 12, 16, 20, 23, 27, 30, 34, 40],
   },
   {
-    name: 'קאפעליע פריילעך', email: 'freilach@example.com',
-    display_name: 'קאַפּעליע פֿריילעך', categories: 'band,musician,keyboard',
-    bio: 'אַ פֿולע קאַפּעליע מיט קלאַוויר, פֿידל, דראַמס און בלאָזערס. פֿאַר יעדע סארט שׂמחה.',
-    phone: '845-555-0147', location: 'מאנסי', price_from: '$2,500', featured: true,
+    name: 'The Harmony Band', email: 'freilach@example.com',
+    display_name: 'The Harmony Band', categories: 'band,musician,keyboard',
+    bio: 'A full band with keyboard, violin, drums and horns. For every kind of event.',
+    phone: '845-555-0147', location: 'Monsey, NY', price_from: '$2,500', featured: true,
     avail: [1, 4, 6, 7, 11, 14, 18, 22, 25, 29, 33],
   },
   {
-    name: 'יענקי שווארץ', email: 'yanky@example.com',
-    display_name: 'יענקי שוואַרץ', categories: 'dj,producer',
-    bio: 'די-דזשעי און פּראָדוצירער פֿאַר מאָדערנע שׂמחות. מיט ליכט און סאַונד.',
-    phone: '347-555-0199', location: 'וויליאמסבורג', price_from: '$1,200',
+    name: 'Jake Black', email: 'yanky@example.com',
+    display_name: 'DJ Jake Black', categories: 'dj,producer',
+    bio: 'DJ and producer for modern events, with full lighting and sound.',
+    phone: '347-555-0199', location: 'Williamsburg, NY', price_from: '$1,200',
     avail: [3, 8, 10, 15, 19, 24, 28, 31, 38],
   },
   {
-    name: 'שלמה גרין', email: 'shloime@example.com',
-    display_name: 'שלמה גרין', categories: 'violin,musician',
-    bio: 'פֿידלער מיט איבער 15 יאָר דערפֿאַרונג. סאָלאָ אָדער מיט אַ קאַפּעליע.',
-    phone: '718-555-0170', location: 'פלעטבוש', price_from: '$600',
+    name: 'Sam Green', email: 'shloime@example.com',
+    display_name: 'Sam Green', categories: 'violin,musician',
+    bio: 'Violinist with over 15 years of experience. Solo or with a band.',
+    phone: '718-555-0170', location: 'Flatbush, NY', price_from: '$600',
     avail: [2, 5, 13, 17, 21, 26, 35, 42],
   },
   {
-    name: 'בערל פריעד', email: 'berl@example.com',
-    display_name: 'בערל פֿריעד — בדחן', categories: 'badchen,mc',
-    bio: 'אַ פֿרײלעכער בדחן און צערעמאָניע-מײַסטער. מאַכט יעדע שׂמחה לעבעדיק.',
-    phone: '845-555-0122', location: 'קרית יואל', price_from: '$1,000',
+    name: 'Barry Fried', email: 'berl@example.com',
+    display_name: 'Barry Fried', categories: 'badchen,mc',
+    bio: 'A lively entertainer and master of ceremonies. Brings energy to every celebration.',
+    phone: '845-555-0122', location: 'Kiryas Joel, NY', price_from: '$1,000',
     avail: [1, 6, 9, 14, 20, 27, 33, 41],
   },
 ];

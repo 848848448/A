@@ -25,12 +25,12 @@ router.get('/', (req, res) => {
     pending: db.prepare("SELECT COUNT(*) AS c FROM bookings WHERE status = 'pending'").get().c,
     bookings: db.prepare('SELECT COUNT(*) AS c FROM bookings').get().c,
   };
-  res.render('admin/home', { title: 'אַדמין', people, admins, stats });
+  res.render('admin/home', { title: 'Admin', people, admins, stats });
 });
 
 // New account form
 router.get('/new', (req, res) => {
-  res.render('admin/new', { title: 'נײַער אַקאונט', categories: CATEGORIES, generated: crypto.randomBytes(5).toString('hex') });
+  res.render('admin/new', { title: 'New Account', categories: CATEGORIES, generated: crypto.randomBytes(5).toString('hex') });
 });
 
 // Create account (a user + a performer profile)
@@ -46,12 +46,12 @@ router.post('/new', (req, res) => {
   cats = cats.filter(Boolean);
 
   if (!name || !email || password.length < 6) {
-    req.session.flash = { type: 'error', msg: 'דאַרפֿסט אָנגעבן אַ נאָמען, אַ בליץ-פּאָסט, און אַ פּאַסווערד (כאָטש 6 אותיות).' };
+    req.session.flash = { type: 'error', msg: 'Please provide a name, an email, and a password (at least 6 characters).' };
     return res.redirect('/admin/new');
   }
   const exists = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
   if (exists) {
-    req.session.flash = { type: 'error', msg: 'עס איז שוין דאָ אַן אַקאונט מיט דעם בליץ-פּאָסט.' };
+    req.session.flash = { type: 'error', msg: 'An account with that email already exists.' };
     return res.redirect('/admin/new');
   }
 
@@ -73,7 +73,7 @@ router.post('/new', (req, res) => {
 
   req.session.flash = {
     type: 'success',
-    msg: `דער אַקאונט פֿאַר ${name} איז געעפֿנט געוואָרן. בליץ-פּאָסט: ${email} · פּאַסווערד: ${password}`,
+    msg: `The account for ${name} has been created. Email: ${email} · Password: ${password}`,
   };
   res.redirect('/admin');
 });
@@ -93,7 +93,7 @@ router.post('/user/:id/password', (req, res) => {
   if (!user) return res.redirect('/admin');
   const pw = String(req.body.password || '').trim() || crypto.randomBytes(5).toString('hex');
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(bcrypt.hashSync(pw, 10), user.id);
-  req.session.flash = { type: 'success', msg: `נײַער פּאַסווערד פֿאַר ${user.name}: ${pw}` };
+  req.session.flash = { type: 'success', msg: `New password for ${user.name}: ${pw}` };
   res.redirect('/admin');
 });
 
@@ -102,11 +102,11 @@ router.post('/user/:id/delete', (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
   if (!user) return res.redirect('/admin');
   if (user.id === req.currentUser.id) {
-    req.session.flash = { type: 'error', msg: 'מ\'קען נישט אויסמעקן זיך אַליין.' };
+    req.session.flash = { type: 'error', msg: 'You cannot delete your own account.' };
     return res.redirect('/admin');
   }
   db.prepare('DELETE FROM users WHERE id = ?').run(user.id); // cascades to performer/availability/bookings
-  req.session.flash = { type: 'success', msg: `דער אַקאונט פֿון ${user.name} איז אויסגעמעקט געוואָרן.` };
+  req.session.flash = { type: 'success', msg: `The account for ${user.name} has been deleted.` };
   res.redirect('/admin');
 });
 
@@ -119,7 +119,7 @@ router.get('/bookings', (req, res) => {
        ORDER BY CASE b.status WHEN 'pending' THEN 0 WHEN 'accepted' THEN 1 ELSE 2 END, b.event_date ASC`
     )
     .all();
-  res.render('admin/bookings', { title: 'אַלע באַשטעלונגען', bookings });
+  res.render('admin/bookings', { title: 'All Bookings', bookings });
 });
 
 module.exports = router;

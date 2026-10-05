@@ -9,13 +9,13 @@
     if (!cur || cur.month !== d.month) { cur = { month: d.month, year: Number(d.iso.slice(0,4)), lead: d.dow, days: [] }; blocks.push(cur); }
     cur.days.push(d);
   });
-  var DOWS = ['ז','מ','ד','מ','ד','פֿ','ש'];
+  var DOWS = ['S','M','T','W','T','F','S'];
 %>
 
 <main class="page">
   <div class="container">
 
-    <a href="/" class="btn btn-ghost btn-sm" style="margin-bottom:16px"><span class="material-symbols-rounded">arrow_forward</span> צוריק צו דער דירעקטאריע</a>
+    <a href="/" class="btn btn-ghost btn-sm" style="margin-bottom:16px"><span class="material-symbols-rounded">arrow_back</span> Back to the directory</a>
 
     <section class="card card-pad">
       <div class="profile-head">
@@ -24,14 +24,14 @@
           <h1><%= performer.display_name %></h1>
           <div class="perf-cats">
             <% cats.forEach(function(c){ %><span class="tag"><span class="material-symbols-rounded"><%= c.icon %></span> <%= c.label %></span><% }) %>
-            <% if (cats.length === 0) { %><span class="tag"><span class="material-symbols-rounded">music_note</span> מוזיק</span><% } %>
+            <% if (cats.length === 0) { %><span class="tag"><span class="material-symbols-rounded">music_note</span> Music</span><% } %>
           </div>
           <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:12px" class="muted">
             <% if (performer.location) { %><span style="display:inline-flex;gap:6px;align-items:center"><span class="material-symbols-rounded">location_on</span><%= performer.location %></span><% } %>
-            <% if (performer.price_from) { %><span style="display:inline-flex;gap:6px;align-items:center"><span class="material-symbols-rounded">payments</span>פֿון <%= performer.price_from %></span><% } %>
+            <% if (performer.price_from) { %><span style="display:inline-flex;gap:6px;align-items:center"><span class="material-symbols-rounded">payments</span>From <%= performer.price_from %></span><% } %>
           </div>
         </div>
-        <a href="#book" class="btn btn-accent"><span class="material-symbols-rounded">event</span> באַק איצט</a>
+        <a href="#book" class="btn btn-accent"><span class="material-symbols-rounded">event</span> Book now</a>
       </div>
     </section>
 
@@ -40,18 +40,18 @@
         <!-- bio -->
         <% if (performer.bio) { %>
           <section class="card card-pad">
-            <div class="section-head" style="margin-bottom:10px"><h2 style="font-size:1.2rem"><span class="material-symbols-rounded">info</span> וועגן</h2></div>
+            <div class="section-head" style="margin-bottom:10px"><h2 style="font-size:1.2rem"><span class="material-symbols-rounded">info</span> About</h2></div>
             <p style="margin:0;white-space:pre-line"><%= performer.bio %></p>
           </section>
         <% } %>
 
         <!-- availability calendar -->
         <section class="card card-pad section-gap">
-          <div class="section-head" style="margin-bottom:10px"><h2 style="font-size:1.2rem"><span class="material-symbols-rounded">calendar_month</span> ווען פֿריי</h2></div>
+          <div class="section-head" style="margin-bottom:10px"><h2 style="font-size:1.2rem"><span class="material-symbols-rounded">calendar_month</span> Availability</h2></div>
           <div class="legend" style="margin-bottom:16px">
-            <span><span class="sw" style="background:var(--success-bg)"></span> פֿריי</span>
-            <span><span class="sw" style="background:var(--info-bg)"></span> פֿאַרבאַקט</span>
-            <span><span class="sw" style="background:var(--danger-bg)"></span> פֿאַרנומען</span>
+            <span><span class="sw" style="background:var(--success-bg)"></span> Available</span>
+            <span><span class="sw" style="background:var(--info-bg)"></span> Booked</span>
+            <span><span class="sw" style="background:var(--danger-bg)"></span> Unavailable</span>
           </div>
           <div class="cal-wrap">
             <% blocks.forEach(function(b){ %>
@@ -63,11 +63,11 @@
                   <% b.days.forEach(function(d){ var st = d.info ? d.info.status : null; %>
                     <div class="cal-cell">
                       <% if (st === 'available') { %>
-                        <div class="cal-day s-available" onclick="pickBookDate('<%= d.iso %>')" title="פֿריי — גרייט צו באַקן"><%= d.dom %></div>
+                        <div class="cal-day s-available" onclick="pickBookDate('<%= d.iso %>')" title="Available — ready to book"><%= d.dom %></div>
                       <% } else if (st === 'booked') { %>
-                        <div class="cal-day s-booked" title="פֿאַרבאַקט"><%= d.dom %></div>
+                        <div class="cal-day s-booked" title="Booked"><%= d.dom %></div>
                       <% } else if (st === 'unavailable') { %>
-                        <div class="cal-day s-unavailable" title="פֿאַרנומען"><%= d.dom %></div>
+                        <div class="cal-day s-unavailable" title="Unavailable"><%= d.dom %></div>
                       <% } else { %>
                         <div class="cal-day" onclick="pickBookDate('<%= d.iso %>')"><%= d.dom %></div>
                       <% } %>
@@ -77,61 +77,61 @@
               </div>
             <% }) %>
           </div>
-          <p class="hint muted small" style="margin-top:14px"><span class="material-symbols-rounded" style="font-size:16px;vertical-align:-3px">touch_app</span> קלאַפּ אויף אַ גרינעם טאָג כּדי אים אַרײַנצושטעלן אין דער באַשטעלונג.</p>
+          <p class="hint muted small" style="margin-top:14px"><span class="material-symbols-rounded" style="font-size:16px;vertical-align:-3px">touch_app</span> Click a green day to add it to your booking request.</p>
         </section>
       </div>
 
       <!-- sidebar: contact + booking -->
       <aside>
         <section class="card card-pad">
-          <div class="section-head" style="margin-bottom:10px"><h2 style="font-size:1.2rem"><span class="material-symbols-rounded">contacts</span> פֿאַרבינד זיך</h2></div>
+          <div class="section-head" style="margin-bottom:10px"><h2 style="font-size:1.2rem"><span class="material-symbols-rounded">contacts</span> Get in touch</h2></div>
           <div class="contact-list">
             <% if (performer.phone) { %><a href="tel:<%= performer.phone %>"><span class="material-symbols-rounded">call</span> <%= performer.phone %></a><% } %>
             <% if (performer.public_email) { %><a href="mailto:<%= performer.public_email %>"><span class="material-symbols-rounded">mail</span> <%= performer.public_email %></a><% } %>
-            <% if (performer.website) { %><a href="<%= performer.website %>" target="_blank" rel="noopener"><span class="material-symbols-rounded">language</span> וועבזײַטל</a><% } %>
+            <% if (performer.website) { %><a href="<%= performer.website %>" target="_blank" rel="noopener"><span class="material-symbols-rounded">language</span> Website</a><% } %>
             <% if (!performer.phone && !performer.public_email && !performer.website) { %>
-              <div class="ci muted"><span class="material-symbols-rounded">info</span> שיק אַ באַשטעלונג אונטן צו פֿאַרבינדן זיך.</div>
+              <div class="ci muted"><span class="material-symbols-rounded">info</span> Send a booking request below to get in touch.</div>
             <% } %>
           </div>
         </section>
 
         <section class="card card-pad section-gap" id="book">
-          <div class="section-head" style="margin-bottom:10px"><h2 style="font-size:1.2rem"><span class="material-symbols-rounded">event</span> באַק / באַשטעל</h2></div>
+          <div class="section-head" style="margin-bottom:10px"><h2 style="font-size:1.2rem"><span class="material-symbols-rounded">event</span> Book / Request</h2></div>
           <form action="/p/<%= performer.id %>/book" method="post">
             <div class="field">
-              <label>דײַן נאָמען *</label>
+              <label>Your name *</label>
               <input class="input" type="text" name="requester_name" required />
             </div>
             <div class="form-grid">
               <div class="field">
-                <label>טעלעפֿאָן</label>
+                <label>Phone</label>
                 <input class="input" type="tel" name="requester_phone" />
               </div>
               <div class="field">
-                <label>בליץ-פּאָסט</label>
+                <label>Email</label>
                 <input class="input" type="email" name="requester_email" />
               </div>
             </div>
             <div class="form-grid">
               <div class="field">
-                <label>טאָג פֿון שׂמחה *</label>
+                <label>Event date *</label>
                 <input class="input" type="date" id="event_date" name="event_date" min="<%= today %>" required />
               </div>
               <div class="field">
-                <label>מין שׂמחה</label>
-                <input class="input" type="text" name="event_type" placeholder="חתונה, שבע ברכות…" />
+                <label>Event type</label>
+                <input class="input" type="text" name="event_type" placeholder="Wedding, party…" />
               </div>
             </div>
             <div class="field">
-              <label>אָרט</label>
-              <input class="input" type="text" name="location" placeholder="זאַל / שטאָט" />
+              <label>Location</label>
+              <input class="input" type="text" name="location" placeholder="Venue / city" />
             </div>
             <div class="field">
-              <label>אַ נאָטיץ</label>
-              <textarea class="textarea" name="message" placeholder="שרײַב וואָס דו דאַרפֿסט…"></textarea>
+              <label>A note</label>
+              <textarea class="textarea" name="message" placeholder="Tell them what you need…"></textarea>
             </div>
-            <button class="btn btn-accent btn-block" type="submit"><span class="material-symbols-rounded">send</span> שיק באַשטעלונג</button>
-            <p class="hint muted small" style="margin-top:10px">דאַרף אָנגעבן אַ נאָמען, אַ טאָג, און אַ טעלעפֿאָן אָדער בליץ-פּאָסט.</p>
+            <button class="btn btn-accent btn-block" type="submit"><span class="material-symbols-rounded">send</span> Send request</button>
+            <p class="hint muted small" style="margin-top:10px">You must provide a name, a date, and a phone or email.</p>
           </form>
         </section>
       </aside>

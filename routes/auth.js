@@ -8,7 +8,7 @@ const router = express.Router();
 
 router.get('/login', (req, res) => {
   if (req.currentUser) return res.redirect('/dashboard');
-  res.render('login', { title: 'אַרײַנלאָגירן', next: req.query.next || '' });
+  res.render('login', { title: 'Log in', next: req.query.next || '' });
 });
 
 router.post('/login', (req, res) => {
@@ -18,12 +18,12 @@ router.post('/login', (req, res) => {
 
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
-    req.session.flash = { type: 'error', msg: 'דער בליץ-פּאָסט אָדער פּאַסווערד איז נישט ריכטיק.' };
+    req.session.flash = { type: 'error', msg: 'Email or password is incorrect.' };
     return res.redirect('/auth/login' + (req.body.next ? '?next=' + encodeURIComponent(req.body.next) : ''));
   }
 
   req.session.userId = user.id;
-  req.session.flash = { type: 'success', msg: `ברוכים הבאים, ${user.name}!` };
+  req.session.flash = { type: 'success', msg: `Welcome, ${user.name}!` };
   const safeNext = typeof next === 'string' && next.startsWith('/') ? next : '/dashboard';
   res.redirect(safeNext);
 });
@@ -40,19 +40,19 @@ router.post('/password', require('../lib/auth').requireLogin, (req, res) => {
 
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.currentUser.id);
   if (!bcrypt.compareSync(current, user.password_hash)) {
-    req.session.flash = { type: 'error', msg: 'דער איצטיקער פּאַסווערד איז נישט ריכטיק.' };
+    req.session.flash = { type: 'error', msg: 'Current password is incorrect.' };
     return res.redirect('/dashboard/settings');
   }
   if (next.length < 6) {
-    req.session.flash = { type: 'error', msg: 'דער נײַער פּאַסווערד דאַרף זײַן לאַנג כאָטש 6 אותיות.' };
+    req.session.flash = { type: 'error', msg: 'The new password must be at least 6 characters.' };
     return res.redirect('/dashboard/settings');
   }
   if (next !== confirm) {
-    req.session.flash = { type: 'error', msg: 'די צוויי פּאַסווערדן שטימען נישט.' };
+    req.session.flash = { type: 'error', msg: 'The two passwords do not match.' };
     return res.redirect('/dashboard/settings');
   }
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(bcrypt.hashSync(next, 10), user.id);
-  req.session.flash = { type: 'success', msg: 'דער פּאַסווערד איז געביטן געוואָרן.' };
+  req.session.flash = { type: 'success', msg: 'Your password has been changed.' };
   res.redirect('/dashboard/settings');
 });
 
