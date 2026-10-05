@@ -46,13 +46,16 @@ npm install
 npx wrangler login        # opens a browser to authorize
 ```
 
-### 3. Create the database and the photo bucket
+### 3. Create the database
 ```bash
 npx wrangler d1 create muzik-db
-npx wrangler r2 bucket create muzik-uploads
 ```
-The `d1 create` command prints a **`database_id`**. Open `wrangler.toml` and paste it in
-place of the placeholder on the `database_id = "…"` line.
+The command prints a **`database_id`**. Open `wrangler.toml` and paste it in place of the
+placeholder on the `database_id = "…"` line.
+
+> **Photo uploads (R2) are left for later.** R2 needs a payment method on the account, so it
+> stays disabled for now — the app runs fine without it and performers add a photo by pasting
+> an image link. To turn on photo-file uploads later, see *Enable photo uploads* at the bottom.
 
 ### 4. Set a session secret (recommended)
 ```bash
@@ -80,11 +83,24 @@ musicians.
 
 ---
 
+## Enable photo uploads later (R2)
+
+Photo-file uploads use Cloudflare R2, which needs a payment method on file (even on its free
+tier). Until then, performers add a photo by pasting an image link — everything else works.
+When you're ready:
+
+1. Add a payment method in the Cloudflare dashboard and enable R2.
+2. Create the bucket: `npx wrangler r2 bucket create muzik-uploads`
+3. In `wrangler.toml`, uncomment the three `[[r2_buckets]]` lines.
+4. Redeploy: `npm run deploy`
+
+The "Upload a photo" field then appears on the profile page automatically.
+
 ## Notes
 
 - **Custom domain:** in the Cloudflare dashboard, open the Worker → *Settings* → *Domains &
   Routes* to attach your own domain (e.g. `music.yoursite.com`).
 - **Changing the seed:** edit `seed.sql`. Passwords there are pre-hashed with PBKDF2; to add
   accounts after deploy, just use the admin panel instead.
-- **Costs:** the free tiers (Workers 100k requests/day, D1 5 GB, R2 10 GB) are far more than a
-  directory like this needs, so in practice this runs for free.
+- **Costs:** the free tiers (Workers 100k requests/day, D1 5 GB) are far more than a directory
+  like this needs, and need no credit card, so in practice this runs for free.

@@ -205,7 +205,7 @@ app.get('/dashboard/profile', async (c) => {
   const redir = requireLogin(c); if (redir) return redir;
   const DB = c.env.DB; const user = c.get('user');
   const p = await myPerformer(DB, user);
-  return render(c, 'My Profile', dashProfile({ performer: p, pendingBadge: await pendingCount(DB, p.id), user }));
+  return render(c, 'My Profile', dashProfile({ performer: p, pendingBadge: await pendingCount(DB, p.id), user, hasR2: !!c.env.BUCKET }));
 });
 
 app.post('/dashboard/profile', async (c) => {
@@ -219,7 +219,8 @@ app.post('/dashboard/profile', async (c) => {
 
   let photo = p.photo;
   const file = b.photo_file;
-  if (file && typeof file === 'object' && file.size > 0 && /^image\//.test(file.type || '')) {
+  // Photo file upload needs R2. When R2 isn't configured yet, fall back to the URL field.
+  if (c.env.BUCKET && file && typeof file === 'object' && file.size > 0 && /^image\//.test(file.type || '')) {
     const ext = (file.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg').slice(0, 4);
     const key = randomHex(12) + '.' + ext;
     await c.env.BUCKET.put(key, await file.arrayBuffer(), { httpMetadata: { contentType: file.type } });
@@ -420,6 +421,7 @@ app.get('/admin/bookings', async (c) => {
 
 /* ================= uploads (R2) ================= */
 app.get('/uploads/:key', async (c) => {
+  if (!c.env.BUCKET) return notFound(c);
   const obj = await c.env.BUCKET.get(c.req.param('key'));
   if (!obj) return notFound(c);
   const headers = new Headers();

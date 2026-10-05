@@ -15,11 +15,15 @@ binding = "DB"
 database_name = "muzik-db"
 database_id = "00000000-0000-0000-0000-000000000000"  # REPLACE with your real D1 database_id before deploying
 
-# R2 bucket for uploaded profile photos. Create it with:
+# R2 bucket for uploaded profile photos — OPTIONAL, and disabled for now.
+# R2 needs a payment method on the Cloudflare account (even on its free tier),
+# so this is left commented out. The app runs fine without it: performers add a
+# photo by pasting an image link. To enable photo-file uploads later, create the
+# bucket and uncomment these three lines, then redeploy:
 #   wrangler r2 bucket create muzik-uploads
-[[r2_buckets]]
-binding = "BUCKET"
-bucket_name = "muzik-uploads"
+# [[r2_buckets]]
+# binding = "BUCKET"
+# bucket_name = "muzik-uploads"
 
 [vars]
 # Change this to any long random string in production (or set as a secret).

@@ -48,20 +48,25 @@ export function dashHome({ performer, stats, upcoming, pendingBadge, user }) {
   return `<main class="page"><div class="container"><div class="dash">${dashnav('home', pendingBadge, user)}${body}</div></div></main>`;
 }
 
-export function dashProfile({ performer, pendingBadge, user }) {
+export function dashProfile({ performer, pendingBadge, user, hasR2 }) {
   const myCats = performer.categories ? performer.categories.split(',') : [];
   const catSelect = CATEGORIES.map((c) =>
     `<label><input type="checkbox" name="categories" value="${c.key}" ${myCats.indexOf(c.key) !== -1 ? 'checked' : ''} /><span class="material-symbols-rounded">${c.icon}</span> ${c.label}</label>`
   ).join('');
   const photoUrlVal = (performer.photo && performer.photo.indexOf('/uploads/') !== 0) ? performer.photo : '';
+  const photoField = hasR2
+    ? `<div class="field" style="margin-bottom:10px"><label>Upload a photo</label>
+         <input class="input" type="file" name="photo_file" accept="image/*" /><div class="hint">Or paste a link to an image:</div></div>
+       <input class="input" type="url" name="photo_url" placeholder="https://…" value="${e(photoUrlVal)}" />`
+    : `<div class="field" style="margin-bottom:0"><label>Photo link</label>
+         <input class="input" type="url" name="photo_url" placeholder="https://…" value="${e(photoUrlVal)}" />
+         <div class="hint">Paste a link to an image. (Uploading a photo file will be enabled once storage is set up.)</div></div>`;
   const body = `<div>
     <div class="section-head"><h2><span class="material-symbols-rounded">badge</span> My Profile</h2></div>
     <form action="/dashboard/profile" method="post" enctype="multipart/form-data">
       <section class="card card-pad"><div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
         ${avatar(performer.display_name, performer.photo, 88)}
-        <div style="flex:1;min-width:220px"><div class="field" style="margin-bottom:10px"><label>Upload a photo</label>
-          <input class="input" type="file" name="photo_file" accept="image/*" /><div class="hint">Or paste a link to an image:</div></div>
-          <input class="input" type="url" name="photo_url" placeholder="https://…" value="${e(photoUrlVal)}" /></div></div></section>
+        <div style="flex:1;min-width:220px">${photoField}</div></div></section>
       <section class="card card-pad section-gap">
         <div class="field" style="background:var(--surface-sunken);padding:14px 16px;border-radius:var(--radius-md);margin-bottom:22px">
           <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin:0">
