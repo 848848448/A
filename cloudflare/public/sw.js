@@ -1,8 +1,11 @@
 // Service worker for the Music Directory PWA.
 // Static assets are cached (cache-first); pages always go to the network
 // (network-only), so logged-in / dynamic content is never served stale.
+// The VERSION is replaced with the build id at deploy time, so every deploy
+// is detected as an update and the app can offer "tap to refresh".
 
-const CACHE = 'muzik-v1';
+const VERSION = '__BUILD_VERSION__';
+const CACHE = 'muzik-' + VERSION;
 const ASSETS = [
   '/css/styles.css',
   '/css/fonts.css',
@@ -15,7 +18,8 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  // Do NOT skipWaiting here: let the page tell us when to apply the update.
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).catch(() => {}));
 });
 
 self.addEventListener('activate', (e) => {
@@ -24,6 +28,11 @@ self.addEventListener('activate', (e) => {
       .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
+});
+
+// The page posts this when the user taps "update now".
+self.addEventListener('message', (e) => {
+  if (e.data === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('fetch', (e) => {
@@ -45,7 +54,6 @@ self.addEventListener('fetch', (e) => {
   }
 
   // Pages / API → network only (never cache dynamic or logged-in content).
-  // Offline, show a minimal message.
   e.respondWith(
     fetch(req).catch(() =>
       new Response(

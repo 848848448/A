@@ -74,10 +74,46 @@ function shareProfile() {
   }
 }
 
-// ---- PWA: register the service worker so the site is installable as an app ----
+// ---- PWA: register the service worker + "new update" banner ----
+function showUpdateBanner(worker) {
+  if (document.getElementById('md-update')) return;
+  const bar = document.createElement('div');
+  bar.id = 'md-update';
+  bar.style.cssText = 'position:fixed;left:16px;right:16px;bottom:16px;max-width:520px;margin:0 auto;z-index:300;' +
+    'background:var(--primary,#6c4cd6);color:#fff;border-radius:16px;padding:12px 16px;display:flex;align-items:center;gap:12px;' +
+    'box-shadow:0 10px 30px rgba(0,0,0,.3);font-family:inherit';
+  bar.innerHTML = '<span class="material-symbols-rounded">rocket_launch</span>' +
+    '<span style="flex:1;font-weight:600">A new update is available</span>' +
+    '<button id="md-update-btn" style="border:none;cursor:pointer;background:#fff;color:var(--primary,#6c4cd6);font-weight:700;padding:8px 16px;border-radius:999px;font-family:inherit">Update</button>';
+  document.body.appendChild(bar);
+  document.getElementById('md-update-btn').addEventListener('click', () => {
+    if (worker) worker.postMessage('SKIP_WAITING');
+    bar.querySelector('#md-update-btn').textContent = 'Updating…';
+  });
+}
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    navigator.serviceWorker.register('/sw.js').then((reg) => {
+      // A worker already waiting (update downloaded on a previous visit).
+      if (reg.waiting && navigator.serviceWorker.controller) showUpdateBanner(reg.waiting);
+      // A new worker is being installed now.
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', () => {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) showUpdateBanner(nw);
+        });
+      });
+    }).catch(() => {});
+
+    // When the new worker takes control, reload once to get the fresh version.
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloaded) return;
+      reloaded = true;
+      window.location.reload();
+    });
   });
 }
 
