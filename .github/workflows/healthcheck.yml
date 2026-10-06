@@ -44,5 +44,10 @@ jobs:
           echo "sw.js                 : $scode"
           icode=$(curl -s -o /dev/null -w "%{http_code} %{size_download}" "$URL/icons/icon-512.png")
           echo "icon-512.png          : $icode"
+          echo "------------------------------"
+          acode=$(curl -s -o al.json -w "%{http_code}" "$URL/.well-known/assetlinks.json")
+          echo "assetlinks.json       : $acode"
+          grep -q "com.musicdirectory.app" al.json && echo "assetlinks package    : OK" || echo "assetlinks package    : MISSING"
+          grep -q "FA:94:DB" al.json && echo "assetlinks fingerprint: OK" || echo "assetlinks fingerprint: MISSING"
           echo "=============================="
           echo "Done."
