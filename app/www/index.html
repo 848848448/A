@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Music Directory</title>
+<link rel="stylesheet" href="css/fonts.css" />
+<link rel="stylesheet" href="css/styles.css" />
+<style>
+  /* App shell: fixed top bar, scrollable content, bottom tab bar. */
+  :root { --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px); }
+  html, body { height: 100%; }
+  body { overscroll-behavior-y: none; }
+  #app { min-height: 100%; }
+
+  .appbar { height: calc(58px + var(--safe-top)); padding-top: var(--safe-top); }
+  .appbar-inner { height: 58px; }
+  .appbar .brand { font-size: 1.1rem; }
+  .appbar .brand small { display: none; }
+  .appbar .brand .logo { width: 36px; height: 36px; border-radius: 11px; }
+  .appbar .brand .logo .material-symbols-rounded { font-size: 20px; }
+
+  .appview { padding-bottom: calc(76px + var(--safe-bottom)); }
+
+  /* bottom tab bar */
+  .tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+    display: flex; background: var(--surface); border-top: 1px solid var(--outline-soft);
+    padding-bottom: var(--safe-bottom);
+    box-shadow: 0 -4px 16px rgba(50,30,110,.06);
+  }
+  .tabbar button {
+    flex: 1; border: none; background: none; cursor: pointer; font-family: inherit;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 9px 0 10px; color: var(--on-surface-muted); font-size: .72rem; font-weight: 600;
+  }
+  .tabbar button .material-symbols-rounded { font-size: 24px; }
+  .tabbar button.active { color: var(--primary); }
+  .tabbar button.active .material-symbols-rounded { font-variation-settings: 'FILL' 1, 'wght' 500; }
+
+  .loading { display: grid; place-items: center; padding: 60px 20px; color: var(--on-surface-muted); }
+  .spinner { width: 34px; height: 34px; border: 3px solid var(--outline); border-top-color: var(--primary); border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .toast-host { position: fixed; left: 16px; right: 16px; bottom: calc(86px + var(--safe-bottom)); z-index: 300; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
+  .toast { background: var(--on-surface); color: var(--surface); padding: 11px 18px; border-radius: 999px; font-weight: 600; font-size: .9rem; box-shadow: var(--shadow-3); max-width: 92%; }
+  .toast.err { background: var(--danger); color: #fff; }
+
+  .fieldrow { display:flex; gap:10px; } .fieldrow > * { flex:1; }
+  .back-btn { display:inline-flex; align-items:center; gap:6px; }
+</style>
+</head>
+<body>
+  <div id="app">
+    <div class="loading"><div class="spinner"></div></div>
+  </div>
+  <div class="toast-host" id="toasts"></div>
+  <script src="js/app.js"></script>
+</body>
+</html>
