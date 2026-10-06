@@ -8,8 +8,12 @@ import { layout } from './views/layout.js';
 import { indexPage, performerPage, loginPage, errorPage } from './views/pages.js';
 import { dashHome, dashProfile, dashAvailability, dashBookings, dashSettings } from './views/dashboard.js';
 import { adminHome, adminNew, adminBookings } from './views/admin.js';
+import apiApp from './api.js';
 
 const app = new Hono();
+
+// JSON API for the native app.
+app.route('/api', apiApp);
 
 /* ---------------- helpers ---------------- */
 const isSecure = (c) => new URL(c.req.url).protocol === 'https:';
