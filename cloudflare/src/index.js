@@ -87,11 +87,13 @@ app.get('/', async (c) => {
   sql += ' ORDER BY featured DESC, display_name COLLATE NOCASE ASC';
   const { results } = await DB.prepare(sql).bind(...params).all();
   const today = todayISO();
-  const performers = [];
-  for (const p of results) {
-    const row = await DB.prepare("SELECT COUNT(*) AS c FROM availability WHERE performer_id = ? AND status = 'available' AND date >= ?").bind(p.id, today).first();
-    performers.push({ ...p, freeCount: row.c });
-  }
+  // One aggregated query for free-day counts instead of one per performer.
+  const { results: freeRows } = await DB.prepare(
+    "SELECT performer_id, COUNT(*) AS c FROM availability WHERE status = 'available' AND date >= ? GROUP BY performer_id"
+  ).bind(today).all();
+  const freeMap = {};
+  for (const r of freeRows) freeMap[r.performer_id] = r.c;
+  const performers = results.map((p) => ({ ...p, freeCount: freeMap[p.id] || 0 }));
   const total = (await DB.prepare('SELECT COUNT(*) AS c FROM performers WHERE active = 1').first()).c;
   return render(c, 'Music Directory', indexPage({ performers, q, cat, total }));
 });

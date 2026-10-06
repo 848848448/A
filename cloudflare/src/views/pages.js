@@ -85,8 +85,12 @@ export function performerPage({ performer, days, today }) {
   const catTags = (cats.length ? cats : [{ icon: 'music_note', label: 'Music' }])
     .map((c) => `<span class="tag"><span class="material-symbols-rounded">${c.icon}</span> ${c.label}</span>`).join('');
 
+  // WhatsApp link derived from the phone number (US numbers get a leading 1).
+  const waDigits = (performer.phone || '').replace(/\D/g, '');
+  const wa = waDigits ? (waDigits.length === 10 ? '1' + waDigits : waDigits) : '';
   const contact = [
     performer.phone ? `<a href="tel:${e(performer.phone)}"><span class="material-symbols-rounded">call</span> ${e(performer.phone)}</a>` : '',
+    wa ? `<a href="https://wa.me/${wa}" target="_blank" rel="noopener"><span class="material-symbols-rounded">chat</span> WhatsApp</a>` : '',
     performer.public_email ? `<a href="mailto:${e(performer.public_email)}"><span class="material-symbols-rounded">mail</span> ${e(performer.public_email)}</a>` : '',
     performer.website ? `<a href="${e(performer.website)}" target="_blank" rel="noopener"><span class="material-symbols-rounded">language</span> Website</a>` : '',
   ].join('');
@@ -102,7 +106,10 @@ export function performerPage({ performer, days, today }) {
           ${performer.location ? `<span style="display:inline-flex;gap:6px;align-items:center"><span class="material-symbols-rounded">location_on</span>${e(performer.location)}</span>` : ''}
           ${performer.price_from ? `<span style="display:inline-flex;gap:6px;align-items:center"><span class="material-symbols-rounded">payments</span>From ${e(performer.price_from)}</span>` : ''}
         </div></div>
-      <a href="#book" class="btn btn-accent"><span class="material-symbols-rounded">event</span> Book now</a>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <a href="#book" class="btn btn-accent"><span class="material-symbols-rounded">event</span> Book now</a>
+        <button type="button" class="btn btn-outline" onclick="shareProfile()"><span class="material-symbols-rounded">share</span> Share</button>
+      </div>
     </div></section>
     <div class="two-col section-gap"><div>
       ${performer.bio ? `<section class="card card-pad"><div class="section-head" style="margin-bottom:10px"><h2 style="font-size:1.2rem"><span class="material-symbols-rounded">info</span> About</h2></div><p style="margin:0;white-space:pre-line">${e(performer.bio)}</p></section>` : ''}

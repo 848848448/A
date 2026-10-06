@@ -228,6 +228,31 @@ a { color: inherit; text-decoration: none; }
   .searchbar form .btn { width: 100%; }
 }
 
+/* ---- phone polish ---- */
+@media (max-width: 640px) {
+  /* header: keep the brand on one tidy line, drop the subtitle */
+  .appbar-inner { height: 60px; gap: 10px; }
+  .brand { font-size: 1.05rem; min-width: 0; }
+  .brand > span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .brand small { display: none; }
+  .brand .logo { width: 36px; height: 36px; border-radius: 11px; }
+  .brand .logo .material-symbols-rounded { font-size: 20px; }
+  .icon-btn { width: 40px; height: 40px; }
+  .nav { inset-block-start: 60px; }
+
+  /* hero: smaller type and padding so it isn't overwhelming */
+  .hero { padding: 30px 22px; border-radius: var(--radius-lg); }
+  .hero h1 { font-size: 1.6rem; }
+  .hero p { font-size: .98rem; margin-bottom: 20px; }
+  .hero .hero-note { font-size: .82rem; padding: 6px 12px; margin-bottom: 16px; }
+  .hero-deco { font-size: 190px; inset-block-end: -30px; }
+
+  .page { padding-block: 20px 44px; }
+  .section-gap { margin-top: 24px; }
+  .section-head h2 { font-size: 1.3rem; }
+  .container { padding-inline: 16px; }
+}
+
 /* chips */
 .chips { display: flex; gap: 10px; flex-wrap: wrap; }
 .chip {

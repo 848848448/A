@@ -48,4 +48,30 @@ function pickBookDate(iso) {
   }
 }
 
+// ---- share a performer profile ----
+function toast(msg) {
+  let t = document.getElementById('md-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'md-toast';
+    t.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--on-surface,#1c1b1f);color:var(--surface,#fff);padding:11px 18px;border-radius:999px;font-weight:600;font-size:.9rem;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:200;opacity:0;transition:opacity .2s';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  requestAnimationFrame(() => { t.style.opacity = '1'; });
+  clearTimeout(t._h);
+  t._h = setTimeout(() => { t.style.opacity = '0'; }, 2200);
+}
+function shareProfile() {
+  const url = location.href;
+  const title = document.title;
+  if (navigator.share) {
+    navigator.share({ title, url }).catch(() => {});
+  } else if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(() => toast('Link copied!')).catch(() => toast(url));
+  } else {
+    toast('Copy this link: ' + url);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', syncThemeIcon);
