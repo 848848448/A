@@ -1,0 +1,39 @@
+name: Check live site
+
+# Fetches the live site from GitHub's runners (which can reach it) and reports
+# status + key content, so the live deploy can be verified without a local
+# browser. Run it from the Actions tab -> "Check live site" -> Run workflow.
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'Site URL to check'
+        required: false
+        default: 'https://muzik-direktorie.abdeveloping.workers.dev'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch and verify
+        run: |
+          URL="${{ github.event.inputs.url }}"
+          URL="${URL:-https://muzik-direktorie.abdeveloping.workers.dev}"
+          echo "Checking: $URL"
+          echo "=============================="
+          code=$(curl -s -o home.html -w "%{http_code}" "$URL/")
+          echo "Home page HTTP status : $code"
+          echo "Home page size (bytes): $(wc -c < home.html)"
+          grep -q "Find the right music" home.html && echo "Home heading          : OK" || echo "Home heading          : MISSING"
+          grep -oE "[0-9]+ music people ready" home.html | head -1
+          echo "------------------------------"
+          pcode=$(curl -s -o prof.html -w "%{http_code}" "$URL/p/2")
+          echo "Profile /p/2 status   : $pcode"
+          grep -q "WhatsApp" prof.html && echo "WhatsApp button       : OK" || echo "WhatsApp button       : MISSING"
+          grep -q ">.*Share" prof.html && echo "Share button          : OK" || echo "Share button          : MISSING"
+          echo "------------------------------"
+          fsize=$(curl -s -o /dev/null -w "%{size_download}" "$URL/fonts/material-symbols-subset.woff2")
+          echo "Subset icon font bytes: $fsize"
+          echo "=============================="
+          echo "Done."
