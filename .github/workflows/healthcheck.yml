@@ -35,5 +35,14 @@ jobs:
           echo "------------------------------"
           fsize=$(curl -s -o /dev/null -w "%{size_download}" "$URL/fonts/material-symbols-subset.woff2")
           echo "Subset icon font bytes: $fsize"
+          echo "------------------------------"
+          grep -q 'rel="manifest"' home.html && echo "Manifest linked       : OK" || echo "Manifest linked       : MISSING"
+          mcode=$(curl -s -o man.json -w "%{http_code}" "$URL/manifest.webmanifest")
+          echo "manifest.webmanifest  : $mcode"
+          grep -q '"name": "Music Directory"' man.json && echo "Manifest name         : OK" || echo "Manifest name         : MISSING"
+          scode=$(curl -s -o /dev/null -w "%{http_code}" "$URL/sw.js")
+          echo "sw.js                 : $scode"
+          icode=$(curl -s -o /dev/null -w "%{http_code} %{size_download}" "$URL/icons/icon-512.png")
+          echo "icon-512.png          : $icode"
           echo "=============================="
           echo "Done."
