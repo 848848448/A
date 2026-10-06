@@ -421,6 +421,22 @@ app.get('/admin/bookings', async (c) => {
   return render(c, 'All Bookings', adminBookings({ bookings }));
 });
 
+/* ===== Digital Asset Links (lets the Android TWA app run fullscreen) ===== */
+app.get('/.well-known/assetlinks.json', (c) =>
+  c.json([
+    {
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
+        package_name: 'com.musicdirectory.app',
+        sha256_cert_fingerprints: [
+          'FA:94:DB:A4:55:14:2F:5B:5E:A4:80:71:07:54:89:A1:07:97:B8:70:FF:33:26:CD:1F:A0:E0:BF:49:C8:64:94',
+        ],
+      },
+    },
+  ])
+);
+
 /* ================= uploads (R2) ================= */
 app.get('/uploads/:key', async (c) => {
   if (!c.env.BUCKET) return notFound(c);
