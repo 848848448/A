@@ -53,6 +53,12 @@ export function layout({ title, user, path, flash, body }) {
 <link rel="stylesheet" href="/css/fonts.css" />
 <link rel="stylesheet" href="/css/styles.css" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%236c4cd6'/><text x='50' y='72' font-size='60' text-anchor='middle' fill='white'>♪</text></svg>" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#6c4cd6" />
+<link rel="apple-touch-icon" href="/icons/icon-192.png" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Music Directory" />
 </head>
 <body>
 ${headerHtml(user, path || '/')}
