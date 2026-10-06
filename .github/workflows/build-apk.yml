@@ -44,22 +44,32 @@ jobs:
           echo "jdk: $JAVA_HOME"
           echo "sdk: $ANDROID_SDK_ROOT"
 
-      - name: Build the signed APK
+      - name: Generate the Android project
+        working-directory: apk
+        run: bubblewrap update --skipVersionUpgrade || bubblewrap update
+
+      - name: Build and sign the APK
         working-directory: apk
         run: |
           set -e
-          # Normalize the project from twa-manifest.json, then build.
-          bubblewrap update --skipVersionUpgrade || bubblewrap update || true
-          printf '%s\n%s\n' "$BUBBLEWRAP_KEYSTORE_PASSWORD" "$BUBBLEWRAP_KEY_PASSWORD" | \
-            bubblewrap build --skipPwaValidation
-          echo "--- build output ---"
-          ls -la
-          find . -maxdepth 2 -name "*.apk" -print
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease
+          UNSIGNED=$(find . -path '*release*' -name '*.apk' | grep -i unsigned | head -1)
+          [ -z "$UNSIGNED" ] && UNSIGNED=$(find . -path '*release*' -name '*.apk' | head -1)
+          echo "unsigned APK: $UNSIGNED"
+          BT="$(ls -d "$ANDROID_SDK_ROOT"/build-tools/* | sort -V | tail -1)"
+          echo "build-tools: $BT"
+          "$BT/zipalign" -v -p 4 "$UNSIGNED" app-release-aligned.apk
+          "$BT/apksigner" sign --ks android.keystore --ks-key-alias muzik \
+            --ks-pass pass:muzikdirektorie2026 --key-pass pass:muzikdirektorie2026 \
+            --out music-directory.apk app-release-aligned.apk
+          "$BT/apksigner" verify --verbose music-directory.apk
+          ls -la music-directory.apk
 
       - name: Upload the APK
         uses: actions/upload-artifact@v4
         with:
           name: music-directory-apk
-          path: |
-            apk/*.apk
+          path: apk/music-directory.apk
           if-no-files-found: error
