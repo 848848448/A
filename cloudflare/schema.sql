@@ -67,6 +67,18 @@ CREATE TABLE IF NOT EXISTS bookings (
   created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Contact-form messages (shown in the admin inbox).
+CREATE TABLE IF NOT EXISTS messages (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  name        TEXT    NOT NULL,
+  email       TEXT    NOT NULL DEFAULT '',
+  phone       TEXT    NOT NULL DEFAULT '',
+  subject     TEXT    NOT NULL DEFAULT '',
+  body        TEXT    NOT NULL,
+  handled     INTEGER NOT NULL DEFAULT 0,
+  created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS sessions (
   id         TEXT    PRIMARY KEY,
   user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

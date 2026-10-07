@@ -521,8 +521,24 @@ dialog::backdrop { background: rgba(16, 17, 21, .45); backdrop-filter: blur(3px)
 
 /* footer */
 .footer { border-top: 1px solid var(--outline-soft); background: var(--surface); padding: 44px 0 32px; margin-top: auto; }
-.footer-top { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 32px; margin-bottom: 32px; }
-@media (max-width: 700px) { .footer-top { grid-template-columns: 1fr; gap: 24px; } }
+.footer-top { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 32px; margin-bottom: 32px; }
+@media (max-width: 760px) { .footer-top { grid-template-columns: 1fr 1fr; gap: 24px; } }
+@media (max-width: 460px) { .footer-top { grid-template-columns: 1fr; } }
+
+/* long-form content (about / terms / privacy) */
+.prose p { margin: 0 0 14px; color: var(--on-surface); }
+.prose h2 { font-size: 1.15rem; font-weight: 700; margin: 22px 0 8px; letter-spacing: -0.02em; }
+.prose h2:first-child { margin-top: 0; }
+.prose a { color: var(--accent-ink); font-weight: 700; }
+
+/* favorite (save) heart */
+.fav-btn { position: absolute; inset-block-start: 10px; inset-inline-start: 10px; z-index: 2; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--outline); background: color-mix(in srgb, var(--surface) 90%, transparent); color: var(--on-surface-muted); display: grid; place-items: center; cursor: pointer; transition: all .15s; backdrop-filter: blur(4px); }
+.fav-btn:hover { color: #e0245e; border-color: #e0245e; }
+.fav-btn.on { color: #e0245e; border-color: #e0245e; }
+.fav-btn .material-symbols-rounded { font-size: 19px; }
+.fav-btn.on .material-symbols-rounded { font-variation-settings: 'FILL' 1; }
+.fav-btn-inline { position: static; width: auto; height: auto; padding: 10px 16px; border-radius: var(--radius-md); gap: 8px; display: inline-flex; align-items: center; font-weight: 700; font-size: .95rem; font-family: inherit; backdrop-filter: none; background: var(--surface); color: var(--on-surface); }
+.fav-btn-inline .material-symbols-rounded { font-size: 19px; }
 .footer-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 10px; }
 .footer-brand .logo { width: 34px; height: 34px; border-radius: 9px; background: var(--primary); color: var(--on-primary); display: grid; place-items: center; }
 .footer-col h4 { margin: 0 0 12px; font-size: .78rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--on-surface-muted); }

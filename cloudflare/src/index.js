@@ -5,9 +5,9 @@ import { CATEGORY_MAP } from './lib/constants.js';
 import { todayISO } from './lib/helpers.js';
 import { hashPassword, verifyPassword, createSession, getSessionUser, destroySession } from './lib/auth.js';
 import { layout } from './views/layout.js';
-import { indexPage, performerPage, loginPage, errorPage } from './views/pages.js';
+import { indexPage, performerPage, loginPage, errorPage, infoPage, contactPage, savedPage } from './views/pages.js';
 import { dashHome, dashProfile, dashAvailability, dashBookings, dashSettings } from './views/dashboard.js';
-import { adminHome, adminNew, adminBookings, adminReviews } from './views/admin.js';
+import { adminHome, adminNew, adminBookings, adminReviews, adminMessages } from './views/admin.js';
 import apiApp from './api.js';
 
 const app = new Hono();
@@ -181,6 +181,28 @@ app.post('/p/:id/book', async (c) => {
   return c.redirect('/p/' + performer.id);
 });
 
+/* ================= INFO / CONTACT ================= */
+app.get('/about', (c) => render(c, 'About', infoPage('about')));
+app.get('/terms', (c) => render(c, 'Terms of Use', infoPage('terms')));
+app.get('/privacy', (c) => render(c, 'Privacy', infoPage('privacy')));
+app.get('/saved', (c) => render(c, 'Saved', savedPage()));
+
+app.get('/contact', (c) => render(c, 'Contact', contactPage()));
+app.post('/contact', async (c) => {
+  const b = await c.req.parseBody();
+  const name = String(b.name || '').trim().slice(0, 120);
+  const body = String(b.body || '').trim().slice(0, 4000);
+  if (!name || !body) {
+    flash(c, 'error', 'Please add your name and a message.');
+    return c.redirect('/contact');
+  }
+  await c.env.DB.prepare('INSERT INTO messages (name, email, phone, subject, body) VALUES (?, ?, ?, ?, ?)')
+    .bind(name, String(b.email || '').trim().slice(0, 160), String(b.phone || '').trim().slice(0, 60),
+      String(b.subject || '').trim().slice(0, 160), body).run();
+  flash(c, 'success', 'Thank you! Your message was sent — we\'ll get back to you.');
+  return c.redirect('/contact');
+});
+
 /* ================= AUTH ================= */
 app.get('/auth/login', (c) => {
   if (c.get('user')) return c.redirect('/dashboard');
@@ -330,19 +352,25 @@ app.post('/dashboard/availability', async (c) => {
 app.post('/dashboard/availability/bulk', async (c) => {
   const redir = requireLogin(c); if (redir) return redir;
   const DB = c.env.DB; const p = await myPerformer(DB, c.get('user'));
-  const b = await c.req.parseBody();
+  const b = await c.req.parseBody({ all: true });
   const from = String(b.from || '').trim(), to = String(b.to || '').trim();
   const status = ['available', 'unavailable'].includes(b.status) ? b.status : 'available';
   if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || to < from) {
     flash(c, 'error', 'Invalid date range.'); return c.redirect('/dashboard/availability');
   }
+  let dows = b.dow == null ? [] : (Array.isArray(b.dow) ? b.dow : [b.dow]);
+  const dowSet = new Set(dows.map((x) => parseInt(x, 10)).filter((n) => n >= 0 && n <= 6));
   const stmt = DB.prepare(`INSERT INTO availability (performer_id, date, status) VALUES (?, ?, ?)
     ON CONFLICT(performer_id, date) DO UPDATE SET status = excluded.status`);
   const batch = [];
   let cur = new Date(from + 'T00:00:00Z'); const end = new Date(to + 'T00:00:00Z');
-  while (cur <= end) { batch.push(stmt.bind(p.id, cur.toISOString().slice(0, 10), status)); cur = new Date(cur.getTime() + 86400000); }
-  if (batch.length) await DB.batch(batch);
-  flash(c, 'success', 'The days have been marked.');
+  while (cur <= end) {
+    if (dowSet.size === 0 || dowSet.has(cur.getUTCDay())) batch.push(stmt.bind(p.id, cur.toISOString().slice(0, 10), status));
+    cur = new Date(cur.getTime() + 86400000);
+  }
+  if (!batch.length) { flash(c, 'error', 'No days matched — pick at least one weekday, or none for all.'); return c.redirect('/dashboard/availability'); }
+  await DB.batch(batch);
+  flash(c, 'success', `Marked ${batch.length} day${batch.length === 1 ? '' : 's'}.`);
   return c.redirect('/dashboard/availability');
 });
 
@@ -378,6 +406,35 @@ app.post('/dashboard/bookings/:id', async (c) => {
   return c.redirect('/dashboard/bookings');
 });
 
+app.get('/dashboard/bookings/:id/ics', async (c) => {
+  const redir = requireLogin(c); if (redir) return redir;
+  const DB = c.env.DB; const p = await myPerformer(DB, c.get('user'));
+  const b = await DB.prepare('SELECT * FROM bookings WHERE id = ? AND performer_id = ?').bind(c.req.param('id'), p.id).first();
+  if (!b) return notFound(c);
+  const d = (b.event_date || '').replace(/-/g, '');
+  const endDate = new Date((b.event_date || '') + 'T00:00:00Z');
+  endDate.setUTCDate(endDate.getUTCDate() + 1);
+  const dEnd = endDate.toISOString().slice(0, 10).replace(/-/g, '');
+  const esc = (s) => String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
+  const summary = (b.event_type ? b.event_type + ' — ' : 'Booking — ') + b.requester_name;
+  const descParts = [];
+  if (b.requester_phone) descParts.push('Phone: ' + b.requester_phone);
+  if (b.requester_email) descParts.push('Email: ' + b.requester_email);
+  if (b.message) descParts.push(b.message);
+  const ics = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Music Directory//EN', 'CALSCALE:GREGORIAN',
+    'BEGIN:VEVENT', `UID:booking-${b.id}@musicdirectory`, `DTSTAMP:${stamp}`,
+    `DTSTART;VALUE=DATE:${d}`, `DTEND;VALUE=DATE:${dEnd}`,
+    `SUMMARY:${esc(summary)}`, `DESCRIPTION:${esc(descParts.join('\n'))}`,
+    b.location ? `LOCATION:${esc(b.location)}` : '', 'END:VEVENT', 'END:VCALENDAR',
+  ].filter(Boolean).join('\r\n');
+  return c.body(ics, 200, {
+    'content-type': 'text/calendar; charset=utf-8',
+    'content-disposition': `attachment; filename="booking-${b.id}.ics"`,
+  });
+});
+
 app.get('/dashboard/settings', async (c) => {
   const redir = requireLogin(c); if (redir) return redir;
   const p = await myPerformer(c.env.DB, c.get('user'));
@@ -396,8 +453,26 @@ app.get('/admin', async (c) => {
     pending: (await DB.prepare("SELECT COUNT(*) AS c FROM bookings WHERE status = 'pending'").first()).c,
     bookings: (await DB.prepare('SELECT COUNT(*) AS c FROM bookings').first()).c,
     reviewsPending: (await DB.prepare('SELECT COUNT(*) AS c FROM reviews WHERE approved = 0').first()).c,
+    messagesNew: (await DB.prepare('SELECT COUNT(*) AS c FROM messages WHERE handled = 0').first()).c,
   };
   return render(c, 'Admin', adminHome({ people, admins, stats }));
+});
+
+app.get('/admin/messages', async (c) => {
+  const redir = requireAdmin(c); if (redir) return redir;
+  const { results: messages } = await c.env.DB.prepare('SELECT * FROM messages ORDER BY handled ASC, created_at DESC').all();
+  return render(c, 'Messages', adminMessages({ messages }));
+});
+
+app.post('/admin/message/:id', async (c) => {
+  const redir = requireAdmin(c); if (redir) return redir;
+  const DB = c.env.DB;
+  const b = await c.req.parseBody();
+  const id = c.req.param('id');
+  if (b.action === 'handle') await DB.prepare('UPDATE messages SET handled = 1 WHERE id = ?').bind(id).run();
+  else if (b.action === 'unhandle') await DB.prepare('UPDATE messages SET handled = 0 WHERE id = ?').bind(id).run();
+  else if (b.action === 'delete') await DB.prepare('DELETE FROM messages WHERE id = ?').bind(id).run();
+  return c.redirect('/admin/messages');
 });
 
 app.get('/admin/reviews', async (c) => {

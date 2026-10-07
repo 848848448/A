@@ -127,6 +127,11 @@ export function dashAvailability({ performer, months, pendingBadge, user }) {
         <div class="form-grid"><div class="field"><label>From</label><input class="input" type="date" name="from" required /></div>
           <div class="field"><label>To</label><input class="input" type="date" name="to" required /></div></div>
         <div class="field"><label>Mark as</label><select class="input" name="status"><option value="available">Available</option><option value="unavailable">Unavailable</option></select></div>
+        <div class="field"><label>Only on these days (optional)</label>
+          <div class="cat-select">
+            ${[['0', 'Sun'], ['1', 'Mon'], ['2', 'Tue'], ['3', 'Wed'], ['4', 'Thu'], ['5', 'Fri'], ['6', 'Sat']].map((d) => `<label><input type="checkbox" name="dow" value="${d[0]}" /> ${d[1]}</label>`).join('')}
+          </div>
+          <div class="hint">Leave all unchecked to mark every day in the range — or pick, e.g., every Friday.</div></div>
         <button class="btn btn-tonal" type="submit"><span class="material-symbols-rounded">done_all</span> Mark</button></form></details>
     <div class="cal-wrap">${cals}</div></div>
     <dialog id="dayDialog"><form action="/dashboard/availability" method="post">
@@ -140,6 +145,16 @@ export function dashAvailability({ performer, months, pendingBadge, user }) {
         <button class="btn btn-danger" type="submit" name="clear" value="1"><span class="material-symbols-rounded">delete</span> Clear</button></div>
     </form></dialog>`;
   return `<main class="page"><div class="container"><div class="dash">${dashnav('availability', pendingBadge, user)}${body}</div></div></main>`;
+}
+
+function googleCalUrl(b) {
+  const d = (b.event_date || '').replace(/-/g, '');
+  const end = new Date((b.event_date || '') + 'T00:00:00Z'); end.setUTCDate(end.getUTCDate() + 1);
+  const dEnd = end.toISOString().slice(0, 10).replace(/-/g, '');
+  const text = encodeURIComponent((b.event_type ? b.event_type + ' — ' : 'Booking — ') + b.requester_name);
+  const details = encodeURIComponent([b.requester_phone ? 'Phone: ' + b.requester_phone : '', b.requester_email ? 'Email: ' + b.requester_email : '', b.message || ''].filter(Boolean).join('\n'));
+  const loc = encodeURIComponent(b.location || '');
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${d}/${dEnd}&details=${details}&location=${loc}`;
 }
 
 export function dashBookings({ performer, bookings, filter, pendingBadge, user }) {
@@ -166,7 +181,7 @@ export function dashBookings({ performer, bookings, filter, pendingBadge, user }
           ${b.status !== 'accepted' ? `<button class="btn btn-primary btn-sm" name="action" value="accept"><span class="material-symbols-rounded">check</span> Confirm</button>` : ''}
           ${b.status !== 'declined' ? `<button class="btn btn-ghost btn-sm" name="action" value="decline"><span class="material-symbols-rounded">block</span> Decline</button>` : ''}
           <button class="btn btn-danger btn-sm" name="action" value="delete" onclick="return confirm('Delete this booking?')"><span class="material-symbols-rounded">delete</span></button>
-        </form></div></div>`;
+        </form>${b.status === 'accepted' ? `<div style="display:flex;gap:8px;flex-wrap:wrap;width:100%"><a class="btn btn-ghost btn-sm" href="/dashboard/bookings/${b.id}/ics"><span class="material-symbols-rounded">calendar_add_on</span> Add to calendar</a><a class="btn btn-ghost btn-sm" href="${googleCalUrl(b)}" target="_blank" rel="noopener"><span class="material-symbols-rounded">event</span> Google Calendar</a></div>` : ''}</div></div>`;
     }).join('') + `</div>`;
   }
   const body = `<div><div class="section-head"><h2><span class="material-symbols-rounded">event</span> Bookings</h2></div>

@@ -13,6 +13,7 @@ function headerHtml(user, path) {
   const link = (href, active, icon, label) =>
     `<a href="${href}" class="navlink ${active ? 'active' : ''}"><span class="material-symbols-rounded">${icon}</span> ${label}</a>`;
   let nav = link('/', path === '/', 'search', 'Browse');
+  nav += link('/saved', path === '/saved', 'favorite', 'Saved');
   if (user) {
     nav += link('/dashboard', path.startsWith('/dashboard'), 'dashboard', 'My Dashboard');
     if (user.role === 'admin') nav += link('/admin', path.startsWith('/admin'), 'admin_panel_settings', 'Admin');
@@ -24,6 +25,7 @@ function headerHtml(user, path) {
     <a href="/" class="brand"><span class="logo"><span class="material-symbols-rounded fill">music_note</span></span>
       <span>Music Directory<small>Singers · Bands · Musicians</small></span></a>
     <nav class="nav" id="mainNav">${nav}</nav>
+    <button class="icon-btn" id="installBtn" style="display:none" onclick="installApp()" title="Install app" aria-label="Install app"><span class="material-symbols-rounded">install_mobile</span></button>
     <button class="icon-btn" onclick="toggleTheme()" title="Switch theme" aria-label="Switch theme"><span class="material-symbols-rounded" id="theme-icon">dark_mode</span></button>
     <button class="icon-btn menu-toggle" onclick="toggleMenu()" aria-label="Menu"><span class="material-symbols-rounded">menu</span></button>
   </div></header>`;
@@ -50,7 +52,12 @@ const footerHtml = `<footer class="footer"><div class="container">
     <div class="footer-col"><h4>For artists</h4>
       <a href="/auth/login">Log in</a>
       <a href="/dashboard">My dashboard</a>
-      <a href="/auth/login">Manage availability</a></div>
+      <a href="/contact">Get listed</a></div>
+    <div class="footer-col"><h4>More</h4>
+      <a href="/about">About</a>
+      <a href="/contact">Contact</a>
+      <a href="/terms">Terms of Use</a>
+      <a href="/privacy">Privacy</a></div>
   </div>
   <div class="footer-bottom">
     <span>© ${new Date().getFullYear()} Music Directory · All rights reserved</span>

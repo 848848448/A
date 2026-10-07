@@ -51,6 +51,7 @@ export function indexPage({ performers, q, cat, total, date = '', sort = 'featur
         : `<span class="free-pill none"><span class="material-symbols-rounded">calendar_month</span> See calendar</span>`;
       return `<a href="/p/${p.id}" class="perf-card">
         <div class="perf-cover">${cover}
+          <button class="fav-btn" data-fav="${p.id}" onclick="toggleFav(event, ${p.id})" title="Save" aria-label="Save"><span class="material-symbols-rounded">favorite</span></button>
           ${p.featured ? `<span class="perf-featured"><span class="material-symbols-rounded fill">star</span> Featured</span>` : ''}</div>
         <div class="perf-body"><h3 class="perf-name">${e(p.display_name)}</h3><div class="perf-cats">${cTags}</div>
           ${p.location ? `<div class="perf-meta"><span class="material-symbols-rounded">location_on</span> ${e(p.location)}</div>` : ''}
@@ -163,6 +164,7 @@ export function performerPage({ performer, days, today, reviews = [], ratingAvg 
         </div></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <a href="#book" class="btn btn-accent"><span class="material-symbols-rounded">event</span> Book now</a>
+        <button type="button" class="fav-btn fav-btn-inline" data-fav="${performer.id}" onclick="toggleFav(event, ${performer.id})"><span class="material-symbols-rounded">favorite</span> <span class="fav-label">Save</span></button>
         <button type="button" class="btn btn-outline" onclick="shareProfile()"><span class="material-symbols-rounded">share</span> Share</button>
       </div>
     </div></section>
@@ -228,6 +230,79 @@ export function loginPage({ next }) {
     </form>
     <div class="divider"></div>
     <p class="muted small" style="text-align:center;margin:0"><span class="material-symbols-rounded" style="font-size:16px;vertical-align:-3px">info</span> Don't have an account yet? An administrator will open one for you.</p>
+  </div></main>`;
+}
+
+const INFO = {
+  about: {
+    title: 'About', icon: 'info',
+    html: `
+      <p>Music Directory is one place to find and book the music people who make a simcha special — singers, bands, musicians, cantors, choirs, DJs, entertainers and more.</p>
+      <h2>For people booking</h2>
+      <p>Browse by category, search by name or city, and see each artist's live calendar so you know who's available on your date before you reach out. Send a booking request or contact the artist directly by phone or WhatsApp — it's completely free to use.</p>
+      <h2>For artists</h2>
+      <p>Every artist gets their own profile with a photo, a description, genres, media and a calendar they manage themselves. Keep your availability up to date so people can find you and book you. Accounts are opened by an administrator — <a href="/contact" style="color:var(--accent-ink);font-weight:700">get in touch</a> to be listed.</p>
+      <h2>How booking works</h2>
+      <p>Find an artist → check their open dates → send a request with your event details. The artist replies and confirms. Simple.</p>`,
+  },
+  terms: {
+    title: 'Terms of Use', icon: 'gavel',
+    html: `
+      <p class="muted small">Last updated: ${fmtDate(new Date().toISOString().slice(0, 10))}</p>
+      <p>Music Directory is a listing service that helps people discover and contact music artists. By using the site you agree to the following.</p>
+      <h2>The service</h2>
+      <p>We provide the directory and booking-request tool. Any booking, price, agreement or payment is strictly between you and the artist. We are not a party to those arrangements and do not guarantee any booking, performance, price or outcome.</p>
+      <h2>Your content</h2>
+      <p>Artists are responsible for the accuracy of their own profiles. Reviews and messages must be honest and respectful. We may remove any content that is false, abusive or inappropriate.</p>
+      <h2>Acceptable use</h2>
+      <p>Don't misuse the site, submit false information, spam artists, or use the contact details for anything other than a genuine booking enquiry.</p>
+      <h2>No warranty</h2>
+      <p>The service is provided "as is". We do our best to keep it running and accurate, but we can't guarantee it will be error-free or always available.</p>`,
+  },
+  privacy: {
+    title: 'Privacy', icon: 'shield',
+    html: `
+      <p class="muted small">Last updated: ${fmtDate(new Date().toISOString().slice(0, 10))}</p>
+      <p>We keep data collection to the minimum needed to run the directory.</p>
+      <h2>What we store</h2>
+      <p><strong>Artist profiles:</strong> the details an artist chooses to publish (name, categories, description, contact, media, availability). Artists control and can change these at any time.</p>
+      <p><strong>Booking requests &amp; messages:</strong> the name and contact details you enter, so the artist (or the admin) can reply.</p>
+      <p><strong>Login:</strong> a secure session cookie so artists stay logged in. Passwords are stored only as a salted hash — never in plain text.</p>
+      <h2>What we don't do</h2>
+      <p>We don't sell your data, and we don't send marketing. Contact details on a public profile are there because the artist chose to publish them.</p>
+      <h2>Your choices</h2>
+      <p>Artists can edit or hide their profile anytime. To have your information removed, <a href="/contact" style="color:var(--accent-ink);font-weight:700">contact us</a>.</p>`,
+  },
+};
+
+export function infoPage(kind) {
+  const d = INFO[kind] || INFO.about;
+  return `<main class="page"><div class="container" style="max-width:740px">
+    <div class="section-head"><h2><span class="material-symbols-rounded">${d.icon}</span> ${e(d.title)}</h2></div>
+    <section class="card card-pad prose">${d.html}</section>
+  </div></main>`;
+}
+
+export function contactPage() {
+  return `<main class="page"><div class="container" style="max-width:640px">
+    <div class="section-head"><h2><span class="material-symbols-rounded">mail</span> Contact us</h2></div>
+    <p class="muted" style="margin:-8px 0 20px">Questions, or want to be listed as an artist? Send a message and we'll get back to you.</p>
+    <section class="card card-pad"><form action="/contact" method="post">
+      <div class="form-grid"><div class="field"><label>Your name *</label><input class="input" type="text" name="name" required /></div>
+        <div class="field"><label>Phone</label><input class="input" type="tel" name="phone" /></div></div>
+      <div class="form-grid"><div class="field"><label>Email</label><input class="input" type="email" name="email" /></div>
+        <div class="field"><label>Subject</label><input class="input" type="text" name="subject" placeholder="e.g. List me as an artist" /></div></div>
+      <div class="field"><label>Message *</label><textarea class="textarea" name="body" required placeholder="How can we help?"></textarea></div>
+      <button class="btn btn-primary" type="submit"><span class="material-symbols-rounded">send</span> Send message</button>
+    </form></section>
+  </div></main>`;
+}
+
+export function savedPage() {
+  return `<main class="page"><div class="container">
+    <div class="section-head"><h2><span class="material-symbols-rounded">favorite</span> Saved artists</h2>
+      <a href="/" class="btn btn-ghost btn-sm"><span class="material-symbols-rounded">search</span> Browse all</a></div>
+    <div id="savedGrid"><div class="loading-saved muted" style="padding:20px 0">Loading…</div></div>
   </div></main>`;
 }
 

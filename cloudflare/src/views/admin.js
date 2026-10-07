@@ -34,6 +34,7 @@ export function adminHome({ people, admins, stats }) {
   return `<main class="page"><div class="container">
     <div class="section-head"><h2><span class="material-symbols-rounded">admin_panel_settings</span> Admin Panel</h2>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <a href="/admin/messages" class="btn btn-outline"><span class="material-symbols-rounded">forum</span> Messages${stats.messagesNew ? ` <span class="badge" style="margin-inline-start:6px">${stats.messagesNew}</span>` : ''}</a>
         <a href="/admin/reviews" class="btn btn-outline"><span class="material-symbols-rounded">reviews</span> Reviews${stats.reviewsPending ? ` <span class="badge" style="margin-inline-start:6px">${stats.reviewsPending}</span>` : ''}</a>
         <a href="/admin/bookings" class="btn btn-outline"><span class="material-symbols-rounded">event</span> All bookings</a>
         <a href="/admin/new" class="btn btn-primary"><span class="material-symbols-rounded">person_add</span> Open new account</a></div></div>
@@ -92,6 +93,30 @@ export function adminReviews({ reviews }) {
     <a href="/admin" class="btn btn-ghost btn-sm" style="margin-bottom:12px"><span class="material-symbols-rounded">arrow_back</span> Back to admin</a>
     <div class="section-head"><h2><span class="material-symbols-rounded">reviews</span> Reviews</h2></div>
     <p class="muted small" style="margin:-8px 0 18px">New reviews are hidden until you approve them.</p>${list}
+  </div></main>`;
+}
+
+export function adminMessages({ messages }) {
+  let list;
+  if (!messages.length) {
+    list = `<div class="card card-pad empty"><span class="material-symbols-rounded">mark_email_read</span><p>No messages yet.</p></div>`;
+  } else {
+    list = `<div class="list">` + messages.map((m) => `<div class="row-card"><div class="row-main">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="row-title">${e(m.name)}</span>
+        ${m.subject ? `<span class="muted">· ${e(m.subject)}</span>` : ''}
+        ${m.handled ? `<span class="status is-accepted"><span class="material-symbols-rounded">check_circle</span> Handled</span>` : `<span class="status is-pending"><span class="material-symbols-rounded">schedule</span> New</span>`}</div>
+      <div class="row-sub">${m.email ? `<span><a href="mailto:${e(m.email)}" style="color:var(--accent-ink)"><span class="material-symbols-rounded">mail</span> ${e(m.email)}</a></span>` : ''}
+        ${m.phone ? `<span><a href="tel:${e(m.phone)}" style="color:var(--accent-ink)"><span class="material-symbols-rounded">call</span> ${e(m.phone)}</a></span>` : ''}
+        <span><span class="material-symbols-rounded">schedule</span> ${fmtDate((m.created_at || '').slice(0, 10))}</span></div>
+      <div class="muted small" style="margin-top:8px;padding:10px 12px;background:var(--surface-sunken);border-radius:10px;white-space:pre-line">${e(m.body)}</div></div>
+      <div class="row-actions"><form action="/admin/message/${m.id}" method="post" style="display:flex;gap:8px;flex-wrap:wrap">
+        ${m.handled ? `<button class="btn btn-ghost btn-sm" name="action" value="unhandle"><span class="material-symbols-rounded">undo</span></button>` : `<button class="btn btn-primary btn-sm" name="action" value="handle"><span class="material-symbols-rounded">check</span> Mark done</button>`}
+        <button class="btn btn-danger btn-sm" name="action" value="delete" onclick="return confirm('Delete this message?')"><span class="material-symbols-rounded">delete</span></button>
+      </form></div></div>`).join('') + `</div>`;
+  }
+  return `<main class="page"><div class="container">
+    <a href="/admin" class="btn btn-ghost btn-sm" style="margin-bottom:12px"><span class="material-symbols-rounded">arrow_back</span> Back to admin</a>
+    <div class="section-head"><h2><span class="material-symbols-rounded">forum</span> Messages</h2></div>${list}
   </div></main>`;
 }
 
