@@ -6,7 +6,7 @@ export function avatar(name, photo, size = 48) {
   const inner = photo
     ? `<img src="${e(photo)}" alt="${e(name)}" />`
     : `${e(initials(name))}`;
-  return `<div class="avatar" style="width:${size}px;height:${size}px;font-size:${fs}px;background:hsl(${hue},55%,55%)">${inner}</div>`;
+  return `<div class="avatar" style="width:${size}px;height:${size}px;font-size:${fs}px;background:hsl(${hue},38%,44%)">${inner}</div>`;
 }
 
 function headerHtml(user, path) {
@@ -22,7 +22,7 @@ function headerHtml(user, path) {
   }
   return `<header class="appbar"><div class="container appbar-inner">
     <a href="/" class="brand"><span class="logo"><span class="material-symbols-rounded fill">music_note</span></span>
-      <span>Music Directory<small>Singers · Players · All music people</small></span></a>
+      <span>Music Directory<small>Singers · Bands · Musicians</small></span></a>
     <nav class="nav" id="mainNav">${nav}</nav>
     <button class="icon-btn" onclick="toggleTheme()" title="Switch theme" aria-label="Switch theme"><span class="material-symbols-rounded" id="theme-icon">dark_mode</span></button>
     <button class="icon-btn menu-toggle" onclick="toggleMenu()" aria-label="Menu"><span class="material-symbols-rounded">menu</span></button>
@@ -36,10 +36,26 @@ function flashHtml(flash) {
     <span class="material-symbols-rounded">${icon}</span><div>${e(flash.msg)}</div></div></div>`;
 }
 
-const footerHtml = `<footer class="footer"><div class="container footer-inner">
-  <div style="display:flex;align-items:center;gap:8px"><span class="material-symbols-rounded fill" style="color:var(--primary)">music_note</span>
-    <span>Music Directory — the place for all music people</span></div>
-  <div>© ${new Date().getFullYear()} · All rights reserved</div>
+const footerHtml = `<footer class="footer"><div class="container">
+  <div class="footer-top">
+    <div>
+      <div class="footer-brand"><span class="logo"><span class="material-symbols-rounded fill">music_note</span></span> Music Directory</div>
+      <p class="muted small" style="margin:0;max-width:34ch">The directory for singers, bands, musicians and entertainers — find who's available and book them for your event.</p>
+    </div>
+    <div class="footer-col"><h4>Browse</h4>
+      <a href="/?cat=singer">Singers</a>
+      <a href="/?cat=band">Bands</a>
+      <a href="/?cat=musician">Musicians</a>
+      <a href="/">All artists</a></div>
+    <div class="footer-col"><h4>For artists</h4>
+      <a href="/auth/login">Log in</a>
+      <a href="/dashboard">My dashboard</a>
+      <a href="/auth/login">Manage availability</a></div>
+  </div>
+  <div class="footer-bottom">
+    <span>© ${new Date().getFullYear()} Music Directory · All rights reserved</span>
+    <span>Accounts are opened by an administrator.</span>
+  </div>
 </div></footer><script src="/js/main.js"></script>`;
 
 export function layout({ title, user, path, flash, body }) {
@@ -52,9 +68,10 @@ export function layout({ title, user, path, flash, body }) {
 <meta name="description" content="A directory of singers, musicians and all music people — see when they are available and book them." />
 <link rel="stylesheet" href="/css/fonts.css" />
 <link rel="stylesheet" href="/css/styles.css" />
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%236c4cd6'/><text x='50' y='72' font-size='60' text-anchor='middle' fill='white'>♪</text></svg>" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%2317181c'/><text x='50' y='72' font-size='60' text-anchor='middle' fill='white'>♪</text></svg>" />
 <link rel="manifest" href="/manifest.webmanifest" />
-<meta name="theme-color" content="#6c4cd6" />
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#0e0f12" media="(prefers-color-scheme: dark)" />
 <link rel="apple-touch-icon" href="/icons/icon-192.png" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />

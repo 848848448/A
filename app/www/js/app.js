@@ -42,7 +42,7 @@ function fmtDate(iso) { if (!iso) return ''; var a = iso.split('-'); if (a.lengt
 function weekday(iso) { if (!iso) return ''; var d = new Date(iso + 'T00:00:00Z'); return ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][d.getUTCDay()]; }
 function todayISO() { return new Date().toISOString().slice(0, 10); }
 function catObjs(s) { if (!s) return []; return s.split(',').map(function (x) { return CMAP[x.trim()]; }).filter(Boolean); }
-function avatar(name, photo, size) { var h = hue(name || ''); var fs = Math.round(size * 0.4); var inner = photo ? '<img src="' + e(photo) + '" alt="" onerror="this.style.display=\'none\'">' : e(initials(name)); return '<div class="avatar" style="width:' + size + 'px;height:' + size + 'px;font-size:' + fs + 'px;background:hsl(' + h + ',55%,55%)">' + inner + '</div>'; }
+function avatar(name, photo, size) { var h = hue(name || ''); var fs = Math.round(size * 0.4); var inner = photo ? '<img src="' + e(photo) + '" alt="" onerror="this.style.display=\'none\'">' : e(initials(name)); return '<div class="avatar" style="width:' + size + 'px;height:' + size + 'px;font-size:' + fs + 'px;background:hsl(' + h + ',38%,44%)">' + inner + '</div>'; }
 function waNumber(phone) { var d = String(phone || '').replace(/\D/g, ''); if (!d) return ''; return d.length === 10 ? '1' + d : d; }
 
 function toast(msg, isErr) {
@@ -123,15 +123,15 @@ function viewDirectory() {
       grid = '<div class="card card-pad empty"><span class="material-symbols-rounded">search_off</span><p>No music people found.</p></div>';
     } else {
       grid = '<div class="grid">' + d.performers.map(function (p) {
-        var cats = catObjs(p.categories); var h1 = hue(p.display_name), h2 = (h1 + 40) % 360;
+        var cats = catObjs(p.categories);
         var cover = p.photo ? '<img src="' + e(p.photo) + '" alt="" onerror="this.parentNode.innerHTML=\'<span class=ph>' + e(initials(p.display_name)) + '</span>\'">' : '<span class="ph">' + e(initials(p.display_name)) + '</span>';
         var tags = (cats.length ? cats.slice(0, 3) : [{ icon: 'music_note', label: 'Music' }]).map(function (c) { return '<span class="tag"><span class="material-symbols-rounded">' + c.icon + '</span> ' + c.label + '</span>'; }).join('');
-        var free = p.freeCount > 0 ? '<span class="free-pill"><span class="material-symbols-rounded">event_available</span> ' + p.freeCount + ' free day' + (p.freeCount === 1 ? '' : 's') + '</span>' : '<span class="free-pill none"><span class="material-symbols-rounded">calendar_month</span> See calendar</span>';
-        return '<a href="#/p/' + p.id + '" class="perf-card"><div class="perf-cover" style="background:linear-gradient(135deg,hsl(' + h1 + ',60%,58%),hsl(' + h2 + ',60%,48%))">' + cover + (p.featured ? '<span class="perf-featured"><span class="material-symbols-rounded fill">star</span> Featured</span>' : '') + '</div><div class="perf-body"><h3 class="perf-name">' + e(p.display_name) + '</h3><div class="perf-cats">' + tags + '</div>' + (p.location ? '<div class="perf-meta"><span class="material-symbols-rounded">location_on</span> ' + e(p.location) + '</div>' : '') + '<div class="perf-foot">' + free + '<span class="btn btn-tonal btn-sm">View <span class="material-symbols-rounded">arrow_forward</span></span></div></div></a>';
+        var free = p.freeCount > 0 ? '<span class="free-pill"><span class="material-symbols-rounded">event_available</span> ' + p.freeCount + ' day' + (p.freeCount === 1 ? '' : 's') + ' open</span>' : '<span class="free-pill none"><span class="material-symbols-rounded">calendar_month</span> See calendar</span>';
+        return '<a href="#/p/' + p.id + '" class="perf-card"><div class="perf-cover">' + cover + (p.featured ? '<span class="perf-featured"><span class="material-symbols-rounded fill">star</span> Featured</span>' : '') + '</div><div class="perf-body"><h3 class="perf-name">' + e(p.display_name) + '</h3><div class="perf-cats">' + tags + '</div>' + (p.location ? '<div class="perf-meta"><span class="material-symbols-rounded">location_on</span> ' + e(p.location) + '</div>' : '') + '<div class="perf-foot">' + free + '<span class="btn btn-tonal btn-sm">View <span class="material-symbols-rounded">arrow_forward</span></span></div></div></a>';
       }).join('') + '</div>';
     }
     setView(
-      '<section class="hero" style="padding:26px 22px"><h1 style="font-size:1.5rem;margin:0 0 8px">Find the right music</h1><p style="font-size:.95rem;margin:0 0 16px">Singers, players, bands and all music people — see availability and book them.</p>' +
+      '<section class="hero" style="padding:8px 0 4px"><div class="hero-note"><span class="material-symbols-rounded">verified</span> ' + d.performers.length + ' artists</div><h1 style="font-size:1.9rem;margin:0 0 10px">Book the right music for your simcha.</h1><p style="font-size:1rem;margin:0 0 18px">Browse singers, bands, musicians and entertainers — check who\'s free on your date and reach out.</p>' +
       '<div class="search-field"><span class="material-symbols-rounded">search</span><input id="q" type="text" placeholder="Search name, category, location…" value="' + e(directoryState.q) + '"></div></section>' +
       '<section class="section-gap"><div class="chips">' + chips + '</div></section>' +
       '<section class="section-gap"><div class="section-head"><h2 style="font-size:1.3rem"><span class="material-symbols-rounded">library_music</span> ' + (directoryState.cat && CMAP[directoryState.cat] ? CMAP[directoryState.cat].label + 's' : 'All music people') + '</h2><div class="muted">' + d.performers.length + ' result' + (d.performers.length === 1 ? '' : 's') + '</div></div>' + grid + '</section>'

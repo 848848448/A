@@ -16,36 +16,34 @@ export function indexPage({ performers, q, cat, total }) {
   } else {
     results = `<div class="grid">` + performers.map((p) => {
       const cats = catObjects(p.categories);
-      const h1 = colorFromString(p.display_name), h2 = (h1 + 40) % 360;
       const cover = p.photo
         ? `<img src="${e(p.photo)}" alt="${e(p.display_name)}" />`
         : `<span class="ph">${e(initials(p.display_name))}</span>`;
       const cTags = (cats.length ? cats.slice(0, 3) : [{ icon: 'music_note', label: 'Music' }])
         .map((c) => `<span class="tag"><span class="material-symbols-rounded">${c.icon}</span> ${c.label}</span>`).join('');
       const free = p.freeCount > 0
-        ? `<span class="free-pill"><span class="material-symbols-rounded">event_available</span> ${p.freeCount} free day${p.freeCount === 1 ? '' : 's'}</span>`
+        ? `<span class="free-pill"><span class="material-symbols-rounded">event_available</span> ${p.freeCount} day${p.freeCount === 1 ? '' : 's'} open</span>`
         : `<span class="free-pill none"><span class="material-symbols-rounded">calendar_month</span> See calendar</span>`;
       return `<a href="/p/${p.id}" class="perf-card">
-        <div class="perf-cover" style="background:linear-gradient(135deg,hsl(${h1},60%,58%),hsl(${h2},60%,48%))">${cover}
+        <div class="perf-cover">${cover}
           ${p.featured ? `<span class="perf-featured"><span class="material-symbols-rounded fill">star</span> Featured</span>` : ''}</div>
         <div class="perf-body"><h3 class="perf-name">${e(p.display_name)}</h3><div class="perf-cats">${cTags}</div>
           ${p.location ? `<div class="perf-meta"><span class="material-symbols-rounded">location_on</span> ${e(p.location)}</div>` : ''}
-          <div class="perf-foot">${free}<span class="btn btn-tonal btn-sm">Profile <span class="material-symbols-rounded">arrow_forward</span></span></div>
+          <div class="perf-foot">${free}<span class="btn btn-tonal btn-sm">View <span class="material-symbols-rounded">arrow_forward</span></span></div>
         </div></a>`;
     }).join('') + `</div>`;
   }
 
   return `<main class="page"><div class="container">
     <section class="hero">
-      <span class="material-symbols-rounded hero-deco fill">graphic_eq</span>
-      <div class="hero-note"><span class="material-symbols-rounded">verified</span> ${total} music people ready for you</div>
-      <h1>Find the right music for your event</h1>
-      <p>Singers, players, bands, cantors, entertainers and all music people — see when they are available, and book them right here in one place.</p>
+      <div class="hero-note"><span class="material-symbols-rounded">verified</span> ${total} artists on the directory</div>
+      <h1>Book the right music for your simcha.</h1>
+      <p>Singers, bands, musicians, cantors and entertainers — browse profiles, check who's free on your date, and send a booking request in one place.</p>
       <div class="searchbar"><form action="/" method="get">
         <div class="search-field"><span class="material-symbols-rounded">search</span>
-          <input type="text" name="q" value="${e(q)}" placeholder="Search a name, a category, or a location…" />
+          <input type="text" name="q" value="${e(q)}" placeholder="Search by name, category or city…" />
           ${cat ? `<input type="hidden" name="cat" value="${e(cat)}" />` : ''}</div>
-        <button class="btn btn-accent" type="submit"><span class="material-symbols-rounded">search</span> Search</button>
+        <button class="btn btn-primary" type="submit"><span class="material-symbols-rounded">search</span> Search</button>
       </form></div>
     </section>
     <section class="section-gap"><div class="chips">${chips}</div></section>
@@ -54,7 +52,20 @@ export function indexPage({ performers, q, cat, total }) {
         <div class="muted">${performers.length} result${performers.length === 1 ? '' : 's'}${q ? ' for "' + e(q) + '"' : ''}</div></div>
       ${results}
     </section>
-  </div></main>`;
+  </div>
+  <section class="band section-gap"><div class="container" style="padding-block:48px">
+    <div class="overline">How it works</div>
+    <div class="section-head" style="margin-top:8px"><h2>Book in three simple steps</h2></div>
+    <div class="steps">
+      <div class="step"><div class="n"><span class="material-symbols-rounded">search</span></div>
+        <h3>1 · Find an artist</h3><p>Browse by category — singers, bands, musicians, cantors and more — or search by name and city.</p></div>
+      <div class="step"><div class="n"><span class="material-symbols-rounded">event_available</span></div>
+        <h3>2 · Check the date</h3><p>Each profile shows a live calendar, so you can see exactly which days are open before you reach out.</p></div>
+      <div class="step"><div class="n"><span class="material-symbols-rounded">send</span></div>
+        <h3>3 · Send a request</h3><p>Send a booking request with your event details, or contact the artist directly by phone or WhatsApp.</p></div>
+    </div>
+  </div></section>
+  </main>`;
 }
 
 export function performerPage({ performer, days, today }) {

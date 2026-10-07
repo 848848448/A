@@ -80,11 +80,11 @@ function showUpdateBanner(worker) {
   const bar = document.createElement('div');
   bar.id = 'md-update';
   bar.style.cssText = 'position:fixed;left:16px;right:16px;bottom:16px;max-width:520px;margin:0 auto;z-index:300;' +
-    'background:var(--primary,#6c4cd6);color:#fff;border-radius:16px;padding:12px 16px;display:flex;align-items:center;gap:12px;' +
+    'background:var(--primary,#17181c);color:var(--on-primary,#fff);border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:12px;' +
     'box-shadow:0 10px 30px rgba(0,0,0,.3);font-family:inherit';
   bar.innerHTML = '<span class="material-symbols-rounded">rocket_launch</span>' +
     '<span style="flex:1;font-weight:600">A new update is available</span>' +
-    '<button id="md-update-btn" style="border:none;cursor:pointer;background:#fff;color:var(--primary,#6c4cd6);font-weight:700;padding:8px 16px;border-radius:999px;font-family:inherit">Update</button>';
+    '<button id="md-update-btn" style="border:none;cursor:pointer;background:var(--on-primary,#fff);color:var(--primary,#17181c);font-weight:700;padding:8px 16px;border-radius:10px;font-family:inherit">Update</button>';
   document.body.appendChild(bar);
   document.getElementById('md-update-btn').addEventListener('click', () => {
     if (worker) worker.postMessage('SKIP_WAITING');

@@ -2,8 +2,8 @@
   "appId": "com.musicdirectory.app",
   "appName": "Music Directory",
   "webDir": "www",
-  "backgroundColor": "#6c4cd6",
+  "backgroundColor": "#ffffff",
   "android": {
-    "backgroundColor": "#6c4cd6"
+    "backgroundColor": "#ffffff"
   }
 }
