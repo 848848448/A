@@ -42,6 +42,13 @@ export function colorFromString(s) {
   return h;
 }
 
+// Extract an 11-char YouTube video id from the common URL shapes.
+export function youtubeId(url) {
+  if (!url) return '';
+  const m = String(url).match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|v\/))([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : '';
+}
+
 export function initials(name) {
   const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
   if (!parts.length) return '♪';

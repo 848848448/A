@@ -87,6 +87,26 @@ jobs:
         working-directory: cloudflare
         run: npx --yes wrangler d1 execute muzik-db --remote --file=schema.sql --yes
 
+      - name: Apply column migrations (safe to re-run)
+        if: steps.check.outputs.ready == 'true'
+        working-directory: cloudflare
+        run: |
+          # Add newer performer columns to databases created before they existed.
+          # ALTER TABLE ... ADD COLUMN errors with "duplicate column" once applied,
+          # so each runs on its own and a failure is ignored.
+          for col in \
+            "price_to TEXT NOT NULL DEFAULT ''" \
+            "genres TEXT NOT NULL DEFAULT ''" \
+            "languages TEXT NOT NULL DEFAULT ''" \
+            "experience TEXT NOT NULL DEFAULT ''" \
+            "youtube_url TEXT NOT NULL DEFAULT ''" \
+            "instagram_url TEXT NOT NULL DEFAULT ''" \
+            "gallery TEXT NOT NULL DEFAULT ''"; do
+            echo "migrate: performers.$col"
+            npx --yes wrangler d1 execute muzik-db --remote --yes \
+              --command "ALTER TABLE performers ADD COLUMN $col" || true
+          done
+
       - name: Seed admin + sample data (safe to re-run)
         if: steps.check.outputs.ready == 'true'
         working-directory: cloudflare

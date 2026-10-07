@@ -79,7 +79,17 @@ export function dashProfile({ performer, pendingBadge, user, hasR2 }) {
           <div class="field"><label>Public email</label><input class="input" type="email" name="public_email" value="${e(performer.public_email)}" /></div></div>
         <div class="form-grid"><div class="field"><label>Website</label><input class="input" type="url" name="website" value="${e(performer.website)}" placeholder="https://…" /></div>
           <div class="field"><label>Location / area</label><input class="input" type="text" name="location" value="${e(performer.location)}" placeholder="Brooklyn, Monsey…" /></div></div>
-        <div class="field"><label>Price from (optional)</label><input class="input" type="text" name="price_from" value="${e(performer.price_from)}" placeholder="$500" /></div>
+        <div class="form-grid"><div class="field"><label>Price from (optional)</label><input class="input" type="text" name="price_from" value="${e(performer.price_from)}" placeholder="$500" /></div>
+          <div class="field"><label>Price to (optional)</label><input class="input" type="text" name="price_to" value="${e(performer.price_to || '')}" placeholder="$1,500" /></div></div>
+        <div class="form-grid"><div class="field"><label>Styles / genres</label><input class="input" type="text" name="genres" value="${e(performer.genres || '')}" placeholder="Chassidish, Classic, Freilach…" /><div class="hint">Separate with commas.</div></div>
+          <div class="field"><label>Languages</label><input class="input" type="text" name="languages" value="${e(performer.languages || '')}" placeholder="Yiddish, English, Hebrew" /><div class="hint">Separate with commas.</div></div></div>
+        <div class="field"><label>Years of experience</label><input class="input" type="text" name="experience" value="${e(performer.experience || '')}" placeholder="15" /></div>
+        <div class="divider"></div>
+        <div class="field" style="margin-bottom:6px"><label><span class="material-symbols-rounded" style="font-size:18px;vertical-align:-4px;color:var(--accent-ink)">link</span> Media &amp; links</label>
+          <div class="hint">No uploads needed — just paste links.</div></div>
+        <div class="form-grid"><div class="field"><label>YouTube video</label><input class="input" type="url" name="youtube_url" value="${e(performer.youtube_url || '')}" placeholder="https://youtube.com/watch?v=…" /></div>
+          <div class="field"><label>Instagram</label><input class="input" type="url" name="instagram_url" value="${e(performer.instagram_url || '')}" placeholder="https://instagram.com/…" /></div></div>
+        <div class="field"><label>Photo gallery (links)</label><textarea class="textarea" name="gallery" placeholder="One image link per line">${e(performer.gallery || '')}</textarea><div class="hint">Paste one image link per line — they show as a gallery on your profile.</div></div>
         <button class="btn btn-primary" type="submit"><span class="material-symbols-rounded">save</span> Save</button>
       </section>
     </form></div>`;

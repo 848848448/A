@@ -58,14 +58,28 @@ const footerHtml = `<footer class="footer"><div class="container">
   </div>
 </div></footer><script src="/js/main.js"></script>`;
 
-export function layout({ title, user, path, flash, body }) {
+export function layout({ title, user, path, flash, body, origin = '', url = '', description = '', image = '' }) {
+  const fullTitle = title ? title + ' · Music Directory' : 'Music Directory — book singers, bands & musicians';
+  const desc = (description || 'A directory of singers, bands, musicians, cantors and entertainers — see when they are available and book them for your event.').slice(0, 300);
+  const img = image ? (/^https?:\/\//i.test(image) ? image : origin + image) : (origin + '/icons/icon-512.png');
   return `<!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>${e(title ? title + ' · Music Directory' : 'Music Directory')}</title>
-<meta name="description" content="A directory of singers, musicians and all music people — see when they are available and book them." />
+<title>${e(fullTitle)}</title>
+<meta name="description" content="${e(desc)}" />
+${url ? `<link rel="canonical" href="${e(url)}" />` : ''}
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Music Directory" />
+<meta property="og:title" content="${e(fullTitle)}" />
+<meta property="og:description" content="${e(desc)}" />
+${url ? `<meta property="og:url" content="${e(url)}" />` : ''}
+<meta property="og:image" content="${e(img)}" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="${e(fullTitle)}" />
+<meta name="twitter:description" content="${e(desc)}" />
+<meta name="twitter:image" content="${e(img)}" />
 <link rel="stylesheet" href="/css/fonts.css" />
 <link rel="stylesheet" href="/css/styles.css" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%2317181c'/><text x='50' y='72' font-size='60' text-anchor='middle' fill='white'>♪</text></svg>" />

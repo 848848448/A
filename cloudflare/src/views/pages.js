@@ -1,12 +1,37 @@
-import { escapeHtml as e, catObjects, colorFromString, initials, MONTHS, fmtDate, weekday } from '../lib/helpers.js';
+import { escapeHtml as e, catObjects, initials, MONTHS, fmtDate, weekday, youtubeId } from '../lib/helpers.js';
 import { CATEGORIES, CATEGORY_MAP } from '../lib/constants.js';
 import { avatar } from './layout.js';
 
-export function indexPage({ performers, q, cat, total }) {
-  const chips = [`<a href="/${q ? '?q=' + encodeURIComponent(q) : ''}" class="chip ${!cat ? 'active' : ''}"><span class="material-symbols-rounded">apps</span> All</a>`]
+export function indexPage({ performers, q, cat, total, date = '', sort = 'featured' }) {
+  const qs = (ov) => {
+    const o = Object.assign({ q, cat, date, sort }, ov);
+    const parts = [];
+    if (o.q) parts.push('q=' + encodeURIComponent(o.q));
+    if (o.cat) parts.push('cat=' + encodeURIComponent(o.cat));
+    if (o.date) parts.push('date=' + encodeURIComponent(o.date));
+    if (o.sort && o.sort !== 'featured') parts.push('sort=' + encodeURIComponent(o.sort));
+    return parts.length ? '/?' + parts.join('&') : '/';
+  };
+  const chips = [`<a href="${qs({ cat: '' })}" class="chip ${!cat ? 'active' : ''}"><span class="material-symbols-rounded">apps</span> All</a>`]
     .concat(CATEGORIES.map((c) =>
-      `<a href="/?cat=${c.key}${q ? '&q=' + encodeURIComponent(q) : ''}" class="chip ${cat === c.key ? 'active' : ''}"><span class="material-symbols-rounded">${c.icon}</span> ${c.label}</a>`
+      `<a href="${qs({ cat: c.key })}" class="chip ${cat === c.key ? 'active' : ''}"><span class="material-symbols-rounded">${c.icon}</span> ${c.label}</a>`
     )).join('');
+
+  const hasFilters = !!(date || sort !== 'featured');
+  const filterbar = `<section class="section-gap"><form action="/" method="get" class="filterbar">
+    ${q ? `<input type="hidden" name="q" value="${e(q)}" />` : ''}
+    ${cat ? `<input type="hidden" name="cat" value="${e(cat)}" />` : ''}
+    <label class="filter-field"><span class="material-symbols-rounded">event</span>
+      <span class="filter-cap">Free on</span><input type="date" name="date" value="${e(date)}" onchange="this.form.submit()" /></label>
+    <label class="filter-field"><span class="material-symbols-rounded">sort</span>
+      <select name="sort" onchange="this.form.submit()">
+        <option value="featured"${sort === 'featured' ? ' selected' : ''}>Featured first</option>
+        <option value="available"${sort === 'available' ? ' selected' : ''}>Most availability</option>
+        <option value="new"${sort === 'new' ? ' selected' : ''}>Newest</option>
+        <option value="name"${sort === 'name' ? ' selected' : ''}>Name (A–Z)</option></select></label>
+    <noscript><button class="btn btn-tonal btn-sm" type="submit">Apply</button></noscript>
+    ${hasFilters ? `<a href="${qs({ date: '', sort: 'featured' })}" class="btn btn-ghost btn-sm"><span class="material-symbols-rounded">close</span> Clear</a>` : ''}
+  </form></section>`;
 
   const headline = (cat && CATEGORY_MAP[cat]) ? CATEGORY_MAP[cat].label + 's' : 'All music people';
 
@@ -42,14 +67,17 @@ export function indexPage({ performers, q, cat, total }) {
       <div class="searchbar"><form action="/" method="get">
         <div class="search-field"><span class="material-symbols-rounded">search</span>
           <input type="text" name="q" value="${e(q)}" placeholder="Search by name, category or city…" />
-          ${cat ? `<input type="hidden" name="cat" value="${e(cat)}" />` : ''}</div>
+          ${cat ? `<input type="hidden" name="cat" value="${e(cat)}" />` : ''}
+          ${date ? `<input type="hidden" name="date" value="${e(date)}" />` : ''}
+          ${sort !== 'featured' ? `<input type="hidden" name="sort" value="${e(sort)}" />` : ''}</div>
         <button class="btn btn-primary" type="submit"><span class="material-symbols-rounded">search</span> Search</button>
       </form></div>
     </section>
     <section class="section-gap"><div class="chips">${chips}</div></section>
+    ${filterbar}
     <section class="section-gap">
       <div class="section-head"><h2><span class="material-symbols-rounded">library_music</span> ${headline}</h2>
-        <div class="muted">${performers.length} result${performers.length === 1 ? '' : 's'}${q ? ' for "' + e(q) + '"' : ''}</div></div>
+        <div class="muted">${performers.length} result${performers.length === 1 ? '' : 's'}${q ? ' for "' + e(q) + '"' : ''}${date ? ' · free on ' + e(fmtDate(date)) : ''}</div></div>
       ${results}
     </section>
   </div>
@@ -68,8 +96,17 @@ export function indexPage({ performers, q, cat, total }) {
   </main>`;
 }
 
-export function performerPage({ performer, days, today }) {
+export function performerPage({ performer, days, today, reviews = [], ratingAvg = 0, ratingCount = 0 }) {
   const cats = catObjects(performer.categories);
+  const splitList = (v) => String(v || '').split(',').map((x) => x.trim()).filter(Boolean);
+  const genres = splitList(performer.genres);
+  const languages = splitList(performer.languages);
+  const ytId = youtubeId(performer.youtube_url);
+  const gallery = String(performer.gallery || '').split(/[\r\n,]+/).map((x) => x.trim()).filter((x) => /^https?:\/\//i.test(x));
+  const priceText = performer.price_from && performer.price_to
+    ? `${performer.price_from} – ${performer.price_to}`
+    : (performer.price_from || performer.price_to || '');
+  const stars = (n) => { let o = ''; for (let i = 1; i <= 5; i++) o += `<span class="material-symbols-rounded${i <= Math.round(n) ? ' fill' : ''}">star</span>`; return o; };
   // group days into month blocks
   const blocks = [];
   let cur = null;
@@ -104,6 +141,7 @@ export function performerPage({ performer, days, today }) {
     wa ? `<a href="https://wa.me/${wa}" target="_blank" rel="noopener"><span class="material-symbols-rounded">chat</span> WhatsApp</a>` : '',
     performer.public_email ? `<a href="mailto:${e(performer.public_email)}"><span class="material-symbols-rounded">mail</span> ${e(performer.public_email)}</a>` : '',
     performer.website ? `<a href="${e(performer.website)}" target="_blank" rel="noopener"><span class="material-symbols-rounded">language</span> Website</a>` : '',
+    performer.instagram_url ? `<a href="${e(performer.instagram_url)}" target="_blank" rel="noopener"><span class="material-symbols-rounded">photo_camera</span> Instagram</a>` : '',
   ].join('');
   const contactBlock = contact || `<div class="ci muted"><span class="material-symbols-rounded">info</span> Send a booking request below to get in touch.</div>`;
 
@@ -113,9 +151,15 @@ export function performerPage({ performer, days, today }) {
       ${avatar(performer.display_name, performer.photo, 120)}
       <div style="flex:1;min-width:240px"><h1>${e(performer.display_name)}</h1>
         <div class="perf-cats">${catTags}</div>
+        ${(genres.length || languages.length) ? `<div class="perf-cats" style="margin-top:8px">
+          ${genres.map((g) => `<span class="tag"><span class="material-symbols-rounded">music_note</span> ${e(g)}</span>`).join('')}
+          ${languages.map((l) => `<span class="tag"><span class="material-symbols-rounded">translate</span> ${e(l)}</span>`).join('')}
+        </div>` : ''}
         <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:12px" class="muted">
+          ${ratingCount ? `<span class="rating-inline" title="${ratingAvg} out of 5">${stars(ratingAvg)} <strong style="color:var(--on-surface);margin-inline-start:4px">${ratingAvg}</strong> (${ratingCount})</span>` : ''}
           ${performer.location ? `<span style="display:inline-flex;gap:6px;align-items:center"><span class="material-symbols-rounded">location_on</span>${e(performer.location)}</span>` : ''}
-          ${performer.price_from ? `<span style="display:inline-flex;gap:6px;align-items:center"><span class="material-symbols-rounded">payments</span>From ${e(performer.price_from)}</span>` : ''}
+          ${priceText ? `<span style="display:inline-flex;gap:6px;align-items:center"><span class="material-symbols-rounded">payments</span>${e(priceText)}</span>` : ''}
+          ${performer.experience ? `<span style="display:inline-flex;gap:6px;align-items:center"><span class="material-symbols-rounded">workspace_premium</span>${e(performer.experience)} yrs experience</span>` : ''}
         </div></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <a href="#book" class="btn btn-accent"><span class="material-symbols-rounded">event</span> Book now</a>
@@ -124,6 +168,10 @@ export function performerPage({ performer, days, today }) {
     </div></section>
     <div class="two-col section-gap"><div>
       ${performer.bio ? `<section class="card card-pad"><div class="section-head" style="margin-bottom:10px"><h2 style="font-size:1.2rem"><span class="material-symbols-rounded">info</span> About</h2></div><p style="margin:0;white-space:pre-line">${e(performer.bio)}</p></section>` : ''}
+      ${(ytId || gallery.length) ? `<section class="card card-pad section-gap"><div class="section-head" style="margin-bottom:14px"><h2 style="font-size:1.2rem"><span class="material-symbols-rounded">play_circle</span> Media</h2></div>
+        ${ytId ? `<div class="video-embed"><iframe src="https://www.youtube-nocookie.com/embed/${e(ytId)}" title="Video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>` : ''}
+        ${gallery.length ? `<div class="gallery"${ytId ? ' style="margin-top:16px"' : ''}>${gallery.map((g) => `<a href="${e(g)}" target="_blank" rel="noopener" class="gallery-item"><img src="${e(g)}" loading="lazy" alt="Photo of ${e(performer.display_name)}" /></a>`).join('')}</div>` : ''}
+      </section>` : ''}
       <section class="card card-pad section-gap">
         <div class="section-head" style="margin-bottom:10px"><h2 style="font-size:1.2rem"><span class="material-symbols-rounded">calendar_month</span> Availability</h2></div>
         <div class="legend" style="margin-bottom:16px">
@@ -132,6 +180,20 @@ export function performerPage({ performer, days, today }) {
           <span><span class="sw" style="background:var(--danger-bg)"></span> Unavailable</span></div>
         <div class="cal-wrap">${cals}</div>
         <p class="hint muted small" style="margin-top:14px"><span class="material-symbols-rounded" style="font-size:16px;vertical-align:-3px">touch_app</span> Click a green day to add it to your booking request.</p>
+      </section>
+      <section class="card card-pad section-gap">
+        <div class="section-head" style="margin-bottom:14px"><h2 style="font-size:1.2rem"><span class="material-symbols-rounded">reviews</span> Reviews</h2>
+          ${ratingCount ? `<span class="rating-inline">${stars(ratingAvg)} <strong style="color:var(--on-surface)">${ratingAvg}</strong> · ${ratingCount} review${ratingCount === 1 ? '' : 's'}</span>` : ''}</div>
+        ${reviews.length ? `<div class="list">${reviews.map((r) => `<div class="review"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><strong>${e(r.author_name)}</strong><span class="rating-inline sm">${stars(r.rating)}</span></div>${r.comment ? `<p class="muted" style="margin:6px 0 0;white-space:pre-line">${e(r.comment)}</p>` : ''}<div class="small muted" style="margin-top:4px">${fmtDate((r.created_at || '').slice(0, 10))}</div></div>`).join('')}</div>` : `<p class="muted small" style="margin:0 0 4px">No reviews yet — be the first to leave one.</p>`}
+        <details style="margin-top:16px"><summary style="cursor:pointer;font-weight:700"><span class="material-symbols-rounded" style="vertical-align:-5px;color:var(--accent-ink)">rate_review</span> Leave a review</summary>
+          <form action="/p/${performer.id}/review" method="post" style="margin-top:14px">
+            <div class="form-grid"><div class="field"><label>Your name *</label><input class="input" name="author_name" required /></div>
+              <div class="field"><label>Rating</label><select class="input" name="rating">
+                <option value="5">★★★★★ — Excellent</option><option value="4">★★★★ — Very good</option><option value="3">★★★ — Good</option><option value="2">★★ — Fair</option><option value="1">★ — Poor</option></select></div></div>
+            <div class="field"><label>Your review</label><textarea class="textarea" name="comment" placeholder="How was it working with them?"></textarea></div>
+            <button class="btn btn-primary" type="submit"><span class="material-symbols-rounded">send</span> Submit review</button>
+            <p class="hint muted small" style="margin-top:8px">Reviews are shown after a quick check.</p>
+          </form></details>
       </section>
     </div>
     <aside>

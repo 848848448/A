@@ -7,7 +7,7 @@ import { hashPassword, verifyPassword, createSession, getSessionUser, destroySes
 import { layout } from './views/layout.js';
 import { indexPage, performerPage, loginPage, errorPage } from './views/pages.js';
 import { dashHome, dashProfile, dashAvailability, dashBookings, dashSettings } from './views/dashboard.js';
-import { adminHome, adminNew, adminBookings } from './views/admin.js';
+import { adminHome, adminNew, adminBookings, adminReviews } from './views/admin.js';
 import apiApp from './api.js';
 
 const app = new Hono();
@@ -24,8 +24,13 @@ function flash(c, type, msg) {
   });
 }
 
-function render(c, title, body) {
-  return c.html(layout({ title, user: c.get('user'), path: new URL(c.req.url).pathname, flash: c.get('flash'), body }));
+function render(c, title, body, meta = {}) {
+  const u = new URL(c.req.url);
+  return c.html(layout({
+    title, user: c.get('user'), path: u.pathname, flash: c.get('flash'), body,
+    origin: u.origin, url: u.origin + u.pathname,
+    description: meta.description, image: meta.image,
+  }));
 }
 
 function randomHex(n) {
@@ -81,14 +86,23 @@ app.get('/', async (c) => {
   const DB = c.env.DB;
   const q = (c.req.query('q') || '').trim();
   const cat = (c.req.query('cat') || '').trim();
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(c.req.query('date') || '') ? c.req.query('date') : '';
+  const sort = ['name', 'new', 'available'].includes(c.req.query('sort')) ? c.req.query('sort') : 'featured';
   let sql = 'SELECT * FROM performers WHERE active = 1';
   const params = [];
-  if (q) { sql += ' AND (display_name LIKE ? OR bio LIKE ? OR location LIKE ?)'; const l = `%${q}%`; params.push(l, l, l); }
+  if (q) { sql += ' AND (display_name LIKE ? OR bio LIKE ? OR location LIKE ? OR genres LIKE ?)'; const l = `%${q}%`; params.push(l, l, l, l); }
   if (cat && CATEGORY_MAP[cat]) {
     sql += ' AND (categories = ? OR categories LIKE ? OR categories LIKE ? OR categories LIKE ?)';
     params.push(cat, `${cat},%`, `%,${cat},%`, `%,${cat}`);
   }
-  sql += ' ORDER BY featured DESC, display_name COLLATE NOCASE ASC';
+  if (date) {
+    sql += " AND id IN (SELECT performer_id FROM availability WHERE date = ? AND status = 'available')";
+    params.push(date);
+  }
+  const orderBy = sort === 'name' ? 'display_name COLLATE NOCASE ASC'
+    : sort === 'new' ? 'created_at DESC, display_name COLLATE NOCASE ASC'
+    : 'featured DESC, display_name COLLATE NOCASE ASC';
+  sql += ' ORDER BY ' + orderBy;
   const { results } = await DB.prepare(sql).bind(...params).all();
   const today = todayISO();
   // One aggregated query for free-day counts instead of one per performer.
@@ -97,9 +111,10 @@ app.get('/', async (c) => {
   ).bind(today).all();
   const freeMap = {};
   for (const r of freeRows) freeMap[r.performer_id] = r.c;
-  const performers = results.map((p) => ({ ...p, freeCount: freeMap[p.id] || 0 }));
+  let performers = results.map((p) => ({ ...p, freeCount: freeMap[p.id] || 0 }));
+  if (sort === 'available') performers = performers.sort((a, b) => b.freeCount - a.freeCount);
   const total = (await DB.prepare('SELECT COUNT(*) AS c FROM performers WHERE active = 1').first()).c;
-  return render(c, 'Music Directory', indexPage({ performers, q, cat, total }));
+  return render(c, 'Music Directory', indexPage({ performers, q, cat, total, date, sort }));
 });
 
 app.get('/p/:id', async (c) => {
@@ -117,7 +132,31 @@ app.get('/p/:id', async (c) => {
     const iso = d.toISOString().slice(0, 10);
     days.push({ iso, info: map[iso] || null, dow: d.getUTCDay(), dom: d.getUTCDate(), month: d.getUTCMonth() });
   }
-  return render(c, performer.display_name, performerPage({ performer, days, today }));
+  const { results: reviews } = await DB.prepare(
+    'SELECT author_name, rating, comment, created_at FROM reviews WHERE performer_id = ? AND approved = 1 ORDER BY created_at DESC LIMIT 50'
+  ).bind(performer.id).all();
+  const agg = await DB.prepare('SELECT COUNT(*) AS c, AVG(rating) AS a FROM reviews WHERE performer_id = ? AND approved = 1').bind(performer.id).first();
+  const ratingCount = agg.c || 0;
+  const ratingAvg = ratingCount ? Math.round(agg.a * 10) / 10 : 0;
+  const catLabels = (performer.categories || '').split(',').map((k) => (CATEGORY_MAP[k] ? CATEGORY_MAP[k].label : '')).filter(Boolean).join(', ');
+  const metaDesc = `${performer.display_name}${catLabels ? ' — ' + catLabels : ''}. ${performer.location ? 'Based in ' + performer.location + '. ' : ''}${performer.bio || 'See availability and send a booking request on Music Directory.'}`;
+  return render(c, performer.display_name, performerPage({ performer, days, today, reviews, ratingAvg, ratingCount }),
+    { description: metaDesc, image: performer.photo || '' });
+});
+
+app.post('/p/:id/review', async (c) => {
+  const DB = c.env.DB;
+  const performer = await DB.prepare('SELECT * FROM performers WHERE id = ? AND active = 1').bind(c.req.param('id')).first();
+  if (!performer) return notFound(c);
+  const b = await c.req.parseBody();
+  const name = String(b.author_name || '').trim().slice(0, 80);
+  let rating = parseInt(b.rating, 10); if (!(rating >= 1 && rating <= 5)) rating = 5;
+  const comment = String(b.comment || '').trim().slice(0, 1000);
+  if (!name) { flash(c, 'error', 'Please add your name to leave a review.'); return c.redirect('/p/' + performer.id); }
+  await DB.prepare('INSERT INTO reviews (performer_id, author_name, rating, comment, approved) VALUES (?, ?, ?, ?, 0)')
+    .bind(performer.id, name, rating, comment).run();
+  flash(c, 'success', 'Thank you! Your review was submitted and will show after a quick check.');
+  return c.redirect('/p/' + performer.id);
 });
 
 app.post('/p/:id/book', async (c) => {
@@ -236,8 +275,13 @@ app.post('/dashboard/profile', async (c) => {
   }
   const visible = b.visible ? 1 : 0;
   const s = (v) => String(v || '').trim();
-  await DB.prepare(`UPDATE performers SET display_name=?, categories=?, bio=?, phone=?, public_email=?, website=?, location=?, price_from=?, photo=?, active=? WHERE id=?`)
-    .bind(s(b.display_name) || user.name, cats.join(','), s(b.bio), s(b.phone), s(b.public_email), s(b.website), s(b.location), s(b.price_from), photo, visible, p.id).run();
+  // Keep only well-formed http(s) image links from the gallery textarea.
+  const gallery = s(b.gallery).split(/[\r\n,]+/).map((x) => x.trim())
+    .filter((x) => /^https?:\/\//i.test(x)).slice(0, 12).join('\n');
+  await DB.prepare(`UPDATE performers SET display_name=?, categories=?, bio=?, phone=?, public_email=?, website=?, location=?, price_from=?, price_to=?, genres=?, languages=?, experience=?, youtube_url=?, instagram_url=?, gallery=?, photo=?, active=? WHERE id=?`)
+    .bind(s(b.display_name) || user.name, cats.join(','), s(b.bio), s(b.phone), s(b.public_email), s(b.website), s(b.location),
+      s(b.price_from), s(b.price_to), s(b.genres), s(b.languages), s(b.experience), s(b.youtube_url), s(b.instagram_url), gallery,
+      photo, visible, p.id).run();
   flash(c, 'success', 'Your profile has been saved.');
   return c.redirect('/dashboard/profile');
 });
@@ -351,8 +395,28 @@ app.get('/admin', async (c) => {
     people: people.length,
     pending: (await DB.prepare("SELECT COUNT(*) AS c FROM bookings WHERE status = 'pending'").first()).c,
     bookings: (await DB.prepare('SELECT COUNT(*) AS c FROM bookings').first()).c,
+    reviewsPending: (await DB.prepare('SELECT COUNT(*) AS c FROM reviews WHERE approved = 0').first()).c,
   };
   return render(c, 'Admin', adminHome({ people, admins, stats }));
+});
+
+app.get('/admin/reviews', async (c) => {
+  const redir = requireAdmin(c); if (redir) return redir;
+  const { results: reviews } = await c.env.DB.prepare(`SELECT r.*, p.display_name AS performer_name
+    FROM reviews r JOIN performers p ON p.id = r.performer_id
+    ORDER BY r.approved ASC, r.created_at DESC`).all();
+  return render(c, 'Reviews', adminReviews({ reviews }));
+});
+
+app.post('/admin/review/:id', async (c) => {
+  const redir = requireAdmin(c); if (redir) return redir;
+  const DB = c.env.DB;
+  const b = await c.req.parseBody();
+  const id = c.req.param('id');
+  if (b.action === 'approve') await DB.prepare('UPDATE reviews SET approved = 1 WHERE id = ?').bind(id).run();
+  else if (b.action === 'hide') await DB.prepare('UPDATE reviews SET approved = 0 WHERE id = ?').bind(id).run();
+  else if (b.action === 'delete') await DB.prepare('DELETE FROM reviews WHERE id = ?').bind(id).run();
+  return c.redirect('/admin/reviews');
 });
 
 app.get('/admin/new', async (c) => {
@@ -440,6 +504,21 @@ app.get('/.well-known/assetlinks.json', (c) =>
     },
   ])
 );
+
+/* ================= SEO: robots + sitemap ================= */
+app.get('/robots.txt', (c) => {
+  const origin = new URL(c.req.url).origin;
+  return c.text(`User-agent: *\nAllow: /\nSitemap: ${origin}/sitemap.xml\n`);
+});
+
+app.get('/sitemap.xml', async (c) => {
+  const origin = new URL(c.req.url).origin;
+  const { results } = await c.env.DB.prepare('SELECT id FROM performers WHERE active = 1').all();
+  const locs = [`${origin}/`, `${origin}/auth/login`].concat(results.map((r) => `${origin}/p/${r.id}`));
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+    locs.map((l) => `  <url><loc>${l}</loc></url>`).join('\n') + `\n</urlset>`;
+  return c.body(xml, 200, { 'content-type': 'application/xml; charset=utf-8' });
+});
 
 /* ================= uploads (R2) ================= */
 app.get('/uploads/:key', async (c) => {

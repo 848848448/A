@@ -20,9 +20,27 @@ CREATE TABLE IF NOT EXISTS performers (
   website       TEXT    NOT NULL DEFAULT '',
   location      TEXT    NOT NULL DEFAULT '',
   price_from    TEXT    NOT NULL DEFAULT '',
+  price_to      TEXT    NOT NULL DEFAULT '',
+  genres        TEXT    NOT NULL DEFAULT '',
+  languages     TEXT    NOT NULL DEFAULT '',
+  experience    TEXT    NOT NULL DEFAULT '',
+  youtube_url   TEXT    NOT NULL DEFAULT '',
+  instagram_url TEXT    NOT NULL DEFAULT '',
+  gallery       TEXT    NOT NULL DEFAULT '',
   photo         TEXT    NOT NULL DEFAULT '',
   featured      INTEGER NOT NULL DEFAULT 0,
   active        INTEGER NOT NULL DEFAULT 1,
+  created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Ratings/reviews left by people who booked (shown after admin approval).
+CREATE TABLE IF NOT EXISTS reviews (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  performer_id  INTEGER NOT NULL REFERENCES performers(id) ON DELETE CASCADE,
+  author_name   TEXT    NOT NULL,
+  rating        INTEGER NOT NULL DEFAULT 5,
+  comment       TEXT    NOT NULL DEFAULT '',
+  approved      INTEGER NOT NULL DEFAULT 0,
   created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -59,3 +77,4 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS idx_avail_perf ON availability(performer_id);
 CREATE INDEX IF NOT EXISTS idx_book_perf  ON bookings(performer_id);
 CREATE INDEX IF NOT EXISTS idx_sess_user  ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_review_perf ON reviews(performer_id);

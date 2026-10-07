@@ -65,3 +65,25 @@ INSERT OR IGNORE INTO availability (performer_id,date,status) VALUES ((SELECT id
 INSERT OR IGNORE INTO availability (performer_id,date,status) VALUES ((SELECT id FROM performers WHERE user_id=(SELECT id FROM users WHERE email='berl@example.com')),'2026-11-07','available');
 INSERT OR IGNORE INTO availability (performer_id,date,status) VALUES ((SELECT id FROM performers WHERE user_id=(SELECT id FROM users WHERE email='berl@example.com')),'2026-11-15','available');
 
+-- Showcase the newer profile fields on the demo artists (only fills blanks, so real edits are kept).
+UPDATE performers SET genres='Chassidish, Classic, Heartfelt', languages='Yiddish, English, Hebrew', experience='18', price_to='$1,800', gallery='https://picsum.photos/seed/mw1/600/600
+https://picsum.photos/seed/mw2/600/600
+https://picsum.photos/seed/mw3/600/600'
+  WHERE user_id=(SELECT id FROM users WHERE email='meir@example.com') AND genres='';
+UPDATE performers SET genres='Freilach, Dance, Classic', languages='Yiddish, English', experience='12', price_to='$5,000', gallery='https://picsum.photos/seed/hb1/600/600
+https://picsum.photos/seed/hb2/600/600
+https://picsum.photos/seed/hb3/600/600
+https://picsum.photos/seed/hb4/600/600'
+  WHERE user_id=(SELECT id FROM users WHERE email='freilach@example.com') AND genres='';
+
+-- A few approved sample reviews (guarded so re-running the seed never duplicates them).
+INSERT INTO reviews (performer_id,author_name,rating,comment,approved)
+  SELECT (SELECT id FROM performers WHERE user_id=(SELECT id FROM users WHERE email='meir@example.com')),'Chaim L.',5,'Michael sang at our wedding and it was unbelievable — everyone was talking about it for weeks.',1
+  WHERE NOT EXISTS (SELECT 1 FROM reviews WHERE author_name='Chaim L.' AND performer_id=(SELECT id FROM performers WHERE user_id=(SELECT id FROM users WHERE email='meir@example.com')));
+INSERT INTO reviews (performer_id,author_name,rating,comment,approved)
+  SELECT (SELECT id FROM performers WHERE user_id=(SELECT id FROM users WHERE email='meir@example.com')),'Sarah B.',5,'A beautiful voice and so easy to work with. Highly recommend.',1
+  WHERE NOT EXISTS (SELECT 1 FROM reviews WHERE author_name='Sarah B.' AND performer_id=(SELECT id FROM performers WHERE user_id=(SELECT id FROM users WHERE email='meir@example.com')));
+INSERT INTO reviews (performer_id,author_name,rating,comment,approved)
+  SELECT (SELECT id FROM performers WHERE user_id=(SELECT id FROM users WHERE email='freilach@example.com')),'Yossi G.',4,'Great band, kept the dancing going all night.',1
+  WHERE NOT EXISTS (SELECT 1 FROM reviews WHERE author_name='Yossi G.' AND performer_id=(SELECT id FROM performers WHERE user_id=(SELECT id FROM users WHERE email='freilach@example.com')));
+
