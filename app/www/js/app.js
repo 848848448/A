@@ -148,6 +148,27 @@ function viewProfile(id) {
   api('/performers/' + id).then(function (d) {
     var p = d.performer; var cats = catObjs(p.categories);
     var tags = (cats.length ? cats : [{ icon: 'music_note', label: 'Music' }]).map(function (c) { return '<span class="tag"><span class="material-symbols-rounded">' + c.icon + '</span> ' + c.label + '</span>'; }).join('');
+    var splitList = function (v) { return String(v || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean); };
+    var genres = splitList(p.genres), languages = splitList(p.languages);
+    var extraTags = genres.map(function (g) { return '<span class="tag"><span class="material-symbols-rounded">music_note</span> ' + e(g) + '</span>'; }).join('') +
+      languages.map(function (l) { return '<span class="tag"><span class="material-symbols-rounded">translate</span> ' + e(l) + '</span>'; }).join('');
+    var ytm = String(p.youtube_url || '').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|v\/))([A-Za-z0-9_-]{11})/);
+    var ytId = ytm ? ytm[1] : '';
+    var gallery = String(p.gallery || '').split(/[\r\n,]+/).map(function (x) { return x.trim(); }).filter(function (x) { return /^https?:\/\//i.test(x); });
+    var priceText = (p.price_from && p.price_to) ? (p.price_from + ' – ' + p.price_to) : (p.price_from || p.price_to || '');
+    var rAvg = d.ratingAvg || 0, rCount = d.ratingCount || 0, reviews = d.reviews || [];
+    var starHtml = function (n) { var o = ''; for (var k = 1; k <= 5; k++) o += '<span class="material-symbols-rounded' + (k <= Math.round(n) ? ' fill' : '') + '">star</span>'; return o; };
+    var mediaHtml = (ytId || gallery.length) ? ('<section class="card card-pad section-gap"><div class="section-head" style="margin-bottom:10px"><h2 style="font-size:1.1rem"><span class="material-symbols-rounded">play_circle</span> Media</h2></div>' +
+      (ytId ? '<div class="video-embed"><iframe src="https://www.youtube-nocookie.com/embed/' + e(ytId) + '" title="Video" loading="lazy" allowfullscreen></iframe></div>' : '') +
+      (gallery.length ? '<div class="gallery"' + (ytId ? ' style="margin-top:14px"' : '') + '>' + gallery.map(function (g) { return '<a href="' + e(g) + '" target="_blank" rel="noopener" class="gallery-item"><img src="' + e(g) + '" loading="lazy" alt=""></a>'; }).join('') + '</div>' : '') +
+      '</section>') : '';
+    var reviewsHtml = '<section class="card card-pad section-gap"><div class="section-head" style="margin-bottom:10px"><h2 style="font-size:1.1rem"><span class="material-symbols-rounded">reviews</span> Reviews</h2>' +
+      (rCount ? '<span class="rating-inline">' + starHtml(rAvg) + ' <strong style="color:var(--on-surface)">' + rAvg + '</strong> · ' + rCount + '</span>' : '') + '</div>' +
+      (reviews.length ? '<div class="list">' + reviews.map(function (r) { return '<div class="review"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><strong>' + e(r.author_name) + '</strong><span class="rating-inline sm">' + starHtml(r.rating) + '</span></div>' + (r.comment ? '<p class="muted" style="margin:6px 0 0;white-space:pre-line">' + e(r.comment) + '</p>' : '') + '</div>'; }).join('') + '</div>' : '<p class="muted small" style="margin:0 0 4px">No reviews yet — be the first.</p>') +
+      '<div class="field" style="margin-top:14px"><label>Leave a review</label><input class="input" id="rv-name" placeholder="Your name" style="margin-bottom:8px">' +
+      '<select class="input" id="rv-rating" style="margin-bottom:8px"><option value="5">★★★★★ Excellent</option><option value="4">★★★★ Very good</option><option value="3">★★★ Good</option><option value="2">★★ Fair</option><option value="1">★ Poor</option></select>' +
+      '<textarea class="textarea" id="rv-comment" placeholder="How was it?"></textarea></div>' +
+      '<button class="btn btn-tonal btn-block" onclick="submitReview(' + p.id + ')"><span class="material-symbols-rounded">send</span> Submit review</button></section>';
     // calendar: 60 days
     var today = d.today; var av = d.availability || {};
     var blocks = []; var cur = null; var start = new Date(today + 'T00:00:00Z');
@@ -164,13 +185,16 @@ function viewProfile(id) {
     if (wa) contact += '<a href="https://wa.me/' + wa + '" target="_blank" rel="noopener"><span class="material-symbols-rounded">chat</span> WhatsApp</a>';
     if (p.public_email) contact += '<a href="mailto:' + e(p.public_email) + '"><span class="material-symbols-rounded">mail</span> ' + e(p.public_email) + '</a>';
     if (p.website) contact += '<a href="' + e(p.website) + '" target="_blank" rel="noopener"><span class="material-symbols-rounded">language</span> Website</a>';
+    if (p.instagram_url) contact += '<a href="' + e(p.instagram_url) + '" target="_blank" rel="noopener"><span class="material-symbols-rounded">photo_camera</span> Instagram</a>';
     if (!contact) contact = '<div class="ci muted"><span class="material-symbols-rounded">info</span> Send a booking request below.</div>';
 
     setView(
       '<a href="#/" class="btn btn-ghost btn-sm back-btn" style="margin-bottom:14px"><span class="material-symbols-rounded">arrow_back</span> Back</a>' +
       '<section class="card card-pad"><div class="profile-head">' + avatar(p.display_name, p.photo, 100) +
       '<div style="flex:1;min-width:200px"><h1 style="font-size:1.6rem">' + e(p.display_name) + '</h1><div class="perf-cats">' + tags + '</div>' +
-      '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px" class="muted">' + (p.location ? '<span style="display:inline-flex;gap:5px;align-items:center"><span class="material-symbols-rounded">location_on</span>' + e(p.location) + '</span>' : '') + (p.price_from ? '<span style="display:inline-flex;gap:5px;align-items:center"><span class="material-symbols-rounded">payments</span>From ' + e(p.price_from) + '</span>' : '') + '</div></div></div></section>' +
+      (extraTags ? '<div class="perf-cats" style="margin-top:6px">' + extraTags + '</div>' : '') +
+      '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px" class="muted">' + (rCount ? '<span class="rating-inline">' + starHtml(rAvg) + ' <strong style="color:var(--on-surface)">' + rAvg + '</strong> (' + rCount + ')</span>' : '') + (p.location ? '<span style="display:inline-flex;gap:5px;align-items:center"><span class="material-symbols-rounded">location_on</span>' + e(p.location) + '</span>' : '') + (priceText ? '<span style="display:inline-flex;gap:5px;align-items:center"><span class="material-symbols-rounded">payments</span>' + e(priceText) + '</span>' : '') + (p.experience ? '<span style="display:inline-flex;gap:5px;align-items:center"><span class="material-symbols-rounded">workspace_premium</span>' + e(p.experience) + ' yrs</span>' : '') + '</div></div></div></section>' +
+      mediaHtml +
       (p.bio ? '<section class="card card-pad section-gap"><div class="section-head" style="margin-bottom:8px"><h2 style="font-size:1.1rem"><span class="material-symbols-rounded">info</span> About</h2></div><p style="margin:0;white-space:pre-line">' + e(p.bio) + '</p></section>' : '') +
       '<section class="card card-pad section-gap"><div class="section-head" style="margin-bottom:8px"><h2 style="font-size:1.1rem"><span class="material-symbols-rounded">contacts</span> Contact</h2></div><div class="contact-list">' + contact + '</div></section>' +
       '<section class="card card-pad section-gap"><div class="section-head" style="margin-bottom:8px"><h2 style="font-size:1.1rem"><span class="material-symbols-rounded">calendar_month</span> Availability</h2></div><div class="legend" style="margin-bottom:14px"><span><span class="sw" style="background:var(--success-bg)"></span> Available</span><span><span class="sw" style="background:var(--info-bg)"></span> Booked</span><span><span class="sw" style="background:var(--danger-bg)"></span> Unavailable</span></div><div class="cal-wrap">' + cals + '</div></section>' +
@@ -179,10 +203,16 @@ function viewProfile(id) {
       '<div class="fieldrow"><div class="field"><label>Phone</label><input class="input" id="b-phone" type="tel"></div><div class="field"><label>Email</label><input class="input" id="b-email" type="email"></div></div>' +
       '<div class="fieldrow"><div class="field"><label>Event date *</label><input class="input" id="b-date" type="date" min="' + today + '"></div><div class="field"><label>Event type</label><input class="input" id="b-type" placeholder="Wedding…"></div></div>' +
       '<div class="field"><label>A note</label><textarea class="textarea" id="b-msg"></textarea></div>' +
-      '<button class="btn btn-accent btn-block" onclick="submitBooking(' + p.id + ')"><span class="material-symbols-rounded">send</span> Send request</button></section>'
+      '<button class="btn btn-accent btn-block" onclick="submitBooking(' + p.id + ')"><span class="material-symbols-rounded">send</span> Send request</button></section>' +
+      reviewsHtml
     );
     syncTheme();
   }).catch(showError);
+}
+function submitReview(id) {
+  var body = { author_name: val('rv-name'), rating: val('rv-rating'), comment: val('rv-comment') };
+  if (!body.author_name) { toast('Please add your name.', true); return; }
+  api('/performers/' + id + '/review', { method: 'POST', body: body }).then(function (d) { toast(d.message || 'Thank you!'); go('/p/' + id); }).catch(function (err) { toast(err.message, true); });
 }
 function pickDate(iso) { var i = document.getElementById('b-date'); if (i) { i.value = iso; document.getElementById('book').scrollIntoView({ behavior: 'smooth' }); } }
 function submitBooking(id) {
@@ -257,7 +287,11 @@ function viewMyProfile() {
       '<div class="field"><label>About you</label><textarea class="textarea" id="p-bio">' + e(p.bio) + '</textarea></div>' +
       '<div class="fieldrow"><div class="field"><label>Phone</label><input class="input" id="p-phone" value="' + e(p.phone) + '"></div><div class="field"><label>Public email</label><input class="input" id="p-email" value="' + e(p.public_email) + '"></div></div>' +
       '<div class="fieldrow"><div class="field"><label>Website</label><input class="input" id="p-web" value="' + e(p.website) + '"></div><div class="field"><label>Location</label><input class="input" id="p-loc" value="' + e(p.location) + '"></div></div>' +
-      '<div class="field"><label>Price from</label><input class="input" id="p-price" value="' + e(p.price_from) + '"></div>' +
+      '<div class="fieldrow"><div class="field"><label>Price from</label><input class="input" id="p-price" value="' + e(p.price_from) + '"></div><div class="field"><label>Price to</label><input class="input" id="p-price2" value="' + e(p.price_to || '') + '"></div></div>' +
+      '<div class="fieldrow"><div class="field"><label>Styles / genres</label><input class="input" id="p-genres" placeholder="Chassidish, Classic…" value="' + e(p.genres || '') + '"></div><div class="field"><label>Languages</label><input class="input" id="p-langs" placeholder="Yiddish, English" value="' + e(p.languages || '') + '"></div></div>' +
+      '<div class="field"><label>Years of experience</label><input class="input" id="p-exp" value="' + e(p.experience || '') + '"></div>' +
+      '<div class="fieldrow"><div class="field"><label>YouTube link</label><input class="input" id="p-yt" placeholder="https://youtube.com/…" value="' + e(p.youtube_url || '') + '"></div><div class="field"><label>Instagram</label><input class="input" id="p-ig" placeholder="https://instagram.com/…" value="' + e(p.instagram_url || '') + '"></div></div>' +
+      '<div class="field"><label>Photo gallery (one link per line)</label><textarea class="textarea" id="p-gallery" placeholder="https://…">' + e(p.gallery || '') + '</textarea></div>' +
       '<button class="btn btn-primary btn-block" onclick="saveProfile()"><span class="material-symbols-rounded">save</span> Save</button></section>'
     );
     syncTheme();
@@ -266,7 +300,7 @@ function viewMyProfile() {
 function saveProfile() {
   var cats = [];
   document.querySelectorAll('#p-cats input:checked').forEach(function (i) { cats.push(i.value); });
-  var body = { display_name: val('p-name'), categories: cats, bio: val('p-bio'), phone: val('p-phone'), public_email: val('p-email'), website: val('p-web'), location: val('p-loc'), price_from: val('p-price'), photo_url: val('p-photo'), visible: document.getElementById('p-visible').checked };
+  var body = { display_name: val('p-name'), categories: cats, bio: val('p-bio'), phone: val('p-phone'), public_email: val('p-email'), website: val('p-web'), location: val('p-loc'), price_from: val('p-price'), price_to: val('p-price2'), genres: val('p-genres'), languages: val('p-langs'), experience: val('p-exp'), youtube_url: val('p-yt'), instagram_url: val('p-ig'), gallery: val('p-gallery'), photo_url: val('p-photo'), visible: document.getElementById('p-visible').checked };
   api('/me/profile', { method: 'PUT', body: body }).then(function () { toast('Profile saved!'); }).catch(function (err) { toast(err.message, true); });
 }
 
