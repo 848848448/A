@@ -5,8 +5,7 @@
   "description": "Music Directory native app (Capacitor)",
   "dependencies": {
     "@capacitor/android": "^6.1.2",
-    "@capacitor/core": "^6.1.2",
-    "@capgo/capacitor-updater": "^6.51.0"
+    "@capacitor/core": "^6.1.2"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
