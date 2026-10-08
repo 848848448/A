@@ -101,7 +101,6 @@ export function performerPage({ performer, days, today, reviews = [], ratingAvg 
   const cats = catObjects(performer.categories);
   const splitList = (v) => String(v || '').split(',').map((x) => x.trim()).filter(Boolean);
   const genres = splitList(performer.genres);
-  const languages = splitList(performer.languages);
   const ytId = youtubeId(performer.youtube_url);
   const gallery = String(performer.gallery || '').split(/[\r\n,]+/).map((x) => x.trim()).filter((x) => /^https?:\/\//i.test(x));
   const priceText = performer.price_from && performer.price_to
@@ -152,9 +151,8 @@ export function performerPage({ performer, days, today, reviews = [], ratingAvg 
       ${avatar(performer.display_name, performer.photo, 120)}
       <div style="flex:1;min-width:240px"><h1>${e(performer.display_name)}</h1>
         <div class="perf-cats">${catTags}</div>
-        ${(genres.length || languages.length) ? `<div class="perf-cats" style="margin-top:8px">
+        ${genres.length ? `<div class="perf-cats" style="margin-top:8px">
           ${genres.map((g) => `<span class="tag"><span class="material-symbols-rounded">music_note</span> ${e(g)}</span>`).join('')}
-          ${languages.map((l) => `<span class="tag"><span class="material-symbols-rounded">translate</span> ${e(l)}</span>`).join('')}
         </div>` : ''}
         <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:12px" class="muted">
           ${ratingCount ? `<span class="rating-inline" title="${ratingAvg} out of 5">${stars(ratingAvg)} <strong style="color:var(--on-surface);margin-inline-start:4px">${ratingAvg}</strong> (${ratingCount})</span>` : ''}

@@ -300,9 +300,9 @@ app.post('/dashboard/profile', async (c) => {
   // Keep only well-formed http(s) image links from the gallery textarea.
   const gallery = s(b.gallery).split(/[\r\n,]+/).map((x) => x.trim())
     .filter((x) => /^https?:\/\//i.test(x)).slice(0, 12).join('\n');
-  await DB.prepare(`UPDATE performers SET display_name=?, categories=?, bio=?, phone=?, public_email=?, website=?, location=?, price_from=?, price_to=?, genres=?, languages=?, experience=?, youtube_url=?, instagram_url=?, gallery=?, photo=?, active=? WHERE id=?`)
+  await DB.prepare(`UPDATE performers SET display_name=?, categories=?, bio=?, phone=?, public_email=?, website=?, location=?, price_from=?, price_to=?, genres=?, experience=?, youtube_url=?, instagram_url=?, gallery=?, photo=?, active=? WHERE id=?`)
     .bind(s(b.display_name) || user.name, cats.join(','), s(b.bio), s(b.phone), s(b.public_email), s(b.website), s(b.location),
-      s(b.price_from), s(b.price_to), s(b.genres), s(b.languages), s(b.experience), s(b.youtube_url), s(b.instagram_url), gallery,
+      s(b.price_from), s(b.price_to), s(b.genres), s(b.experience), s(b.youtube_url), s(b.instagram_url), gallery,
       photo, visible, p.id).run();
   flash(c, 'success', 'Your profile has been saved.');
   return c.redirect('/dashboard/profile');

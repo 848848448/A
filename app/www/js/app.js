@@ -149,9 +149,8 @@ function viewProfile(id) {
     var p = d.performer; var cats = catObjs(p.categories);
     var tags = (cats.length ? cats : [{ icon: 'music_note', label: 'Music' }]).map(function (c) { return '<span class="tag"><span class="material-symbols-rounded">' + c.icon + '</span> ' + c.label + '</span>'; }).join('');
     var splitList = function (v) { return String(v || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean); };
-    var genres = splitList(p.genres), languages = splitList(p.languages);
-    var extraTags = genres.map(function (g) { return '<span class="tag"><span class="material-symbols-rounded">music_note</span> ' + e(g) + '</span>'; }).join('') +
-      languages.map(function (l) { return '<span class="tag"><span class="material-symbols-rounded">translate</span> ' + e(l) + '</span>'; }).join('');
+    var genres = splitList(p.genres);
+    var extraTags = genres.map(function (g) { return '<span class="tag"><span class="material-symbols-rounded">music_note</span> ' + e(g) + '</span>'; }).join('');
     var ytm = String(p.youtube_url || '').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|v\/))([A-Za-z0-9_-]{11})/);
     var ytId = ytm ? ytm[1] : '';
     var gallery = String(p.gallery || '').split(/[\r\n,]+/).map(function (x) { return x.trim(); }).filter(function (x) { return /^https?:\/\//i.test(x); });
@@ -288,7 +287,7 @@ function viewMyProfile() {
       '<div class="fieldrow"><div class="field"><label>Phone</label><input class="input" id="p-phone" value="' + e(p.phone) + '"></div><div class="field"><label>Public email</label><input class="input" id="p-email" value="' + e(p.public_email) + '"></div></div>' +
       '<div class="fieldrow"><div class="field"><label>Website</label><input class="input" id="p-web" value="' + e(p.website) + '"></div><div class="field"><label>Location</label><input class="input" id="p-loc" value="' + e(p.location) + '"></div></div>' +
       '<div class="fieldrow"><div class="field"><label>Price from</label><input class="input" id="p-price" value="' + e(p.price_from) + '"></div><div class="field"><label>Price to</label><input class="input" id="p-price2" value="' + e(p.price_to || '') + '"></div></div>' +
-      '<div class="fieldrow"><div class="field"><label>Styles / genres</label><input class="input" id="p-genres" placeholder="Chassidish, Classic…" value="' + e(p.genres || '') + '"></div><div class="field"><label>Languages</label><input class="input" id="p-langs" placeholder="Yiddish, English" value="' + e(p.languages || '') + '"></div></div>' +
+      '<div class="field"><label>Styles / genres</label><input class="input" id="p-genres" placeholder="Chassidish, Classic…" value="' + e(p.genres || '') + '"></div>' +
       '<div class="field"><label>Years of experience</label><input class="input" id="p-exp" value="' + e(p.experience || '') + '"></div>' +
       '<div class="fieldrow"><div class="field"><label>YouTube link</label><input class="input" id="p-yt" placeholder="https://youtube.com/…" value="' + e(p.youtube_url || '') + '"></div><div class="field"><label>Instagram</label><input class="input" id="p-ig" placeholder="https://instagram.com/…" value="' + e(p.instagram_url || '') + '"></div></div>' +
       '<div class="field"><label>Photo gallery (one link per line)</label><textarea class="textarea" id="p-gallery" placeholder="https://…">' + e(p.gallery || '') + '</textarea></div>' +
@@ -300,7 +299,7 @@ function viewMyProfile() {
 function saveProfile() {
   var cats = [];
   document.querySelectorAll('#p-cats input:checked').forEach(function (i) { cats.push(i.value); });
-  var body = { display_name: val('p-name'), categories: cats, bio: val('p-bio'), phone: val('p-phone'), public_email: val('p-email'), website: val('p-web'), location: val('p-loc'), price_from: val('p-price'), price_to: val('p-price2'), genres: val('p-genres'), languages: val('p-langs'), experience: val('p-exp'), youtube_url: val('p-yt'), instagram_url: val('p-ig'), gallery: val('p-gallery'), photo_url: val('p-photo'), visible: document.getElementById('p-visible').checked };
+  var body = { display_name: val('p-name'), categories: cats, bio: val('p-bio'), phone: val('p-phone'), public_email: val('p-email'), website: val('p-web'), location: val('p-loc'), price_from: val('p-price'), price_to: val('p-price2'), genres: val('p-genres'), experience: val('p-exp'), youtube_url: val('p-yt'), instagram_url: val('p-ig'), gallery: val('p-gallery'), photo_url: val('p-photo'), visible: document.getElementById('p-visible').checked };
   api('/me/profile', { method: 'PUT', body: body }).then(function () { toast('Profile saved!'); }).catch(function (err) { toast(err.message, true); });
 }
 

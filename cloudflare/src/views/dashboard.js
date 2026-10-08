@@ -81,8 +81,7 @@ export function dashProfile({ performer, pendingBadge, user, hasR2 }) {
           <div class="field"><label>Location / area</label><input class="input" type="text" name="location" value="${e(performer.location)}" placeholder="Brooklyn, Monsey…" /></div></div>
         <div class="form-grid"><div class="field"><label>Price from (optional)</label><input class="input" type="text" name="price_from" value="${e(performer.price_from)}" placeholder="$500" /></div>
           <div class="field"><label>Price to (optional)</label><input class="input" type="text" name="price_to" value="${e(performer.price_to || '')}" placeholder="$1,500" /></div></div>
-        <div class="form-grid"><div class="field"><label>Styles / genres</label><input class="input" type="text" name="genres" value="${e(performer.genres || '')}" placeholder="Chassidish, Classic, Freilach…" /><div class="hint">Separate with commas.</div></div>
-          <div class="field"><label>Languages</label><input class="input" type="text" name="languages" value="${e(performer.languages || '')}" placeholder="Yiddish, English, Hebrew" /><div class="hint">Separate with commas.</div></div></div>
+        <div class="field"><label>Styles / genres</label><input class="input" type="text" name="genres" value="${e(performer.genres || '')}" placeholder="Chassidish, Classic, Freilach…" /><div class="hint">Separate with commas.</div></div>
         <div class="field"><label>Years of experience</label><input class="input" type="text" name="experience" value="${e(performer.experience || '')}" placeholder="15" /></div>
         <div class="divider"></div>
         <div class="field" style="margin-bottom:6px"><label><span class="material-symbols-rounded" style="font-size:18px;vertical-align:-4px;color:var(--accent-ink)">link</span> Media &amp; links</label>

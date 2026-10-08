@@ -80,7 +80,7 @@ api.get('/performers', async (c) => {
   const DB = c.env.DB;
   const q = (c.req.query('q') || '').trim();
   const cat = (c.req.query('cat') || '').trim();
-  let sql = 'SELECT id, display_name, categories, bio, phone, public_email, website, location, price_from, price_to, genres, languages, experience, youtube_url, instagram_url, gallery, photo, featured FROM performers WHERE active = 1';
+  let sql = 'SELECT id, display_name, categories, bio, phone, public_email, website, location, price_from, price_to, genres, experience, youtube_url, instagram_url, gallery, photo, featured FROM performers WHERE active = 1';
   const params = [];
   if (q) { sql += ' AND (display_name LIKE ? OR bio LIKE ? OR location LIKE ? OR genres LIKE ?)'; const l = `%${q}%`; params.push(l, l, l, l); }
   if (cat && CATEGORY_MAP[cat]) {
@@ -102,7 +102,7 @@ api.get('/performers', async (c) => {
 api.get('/performers/:id', async (c) => {
   const DB = c.env.DB;
   const performer = await DB.prepare(
-    'SELECT id, display_name, categories, bio, phone, public_email, website, location, price_from, price_to, genres, languages, experience, youtube_url, instagram_url, gallery, photo, featured FROM performers WHERE id = ? AND active = 1'
+    'SELECT id, display_name, categories, bio, phone, public_email, website, location, price_from, price_to, genres, experience, youtube_url, instagram_url, gallery, photo, featured FROM performers WHERE id = ? AND active = 1'
   ).bind(c.req.param('id')).first();
   if (!performer) { c.status(404); return c.json({ error: 'Not found' }); }
   const { results } = await DB.prepare('SELECT date, status, note FROM availability WHERE performer_id = ?').bind(performer.id).all();
@@ -176,9 +176,9 @@ api.put('/me/profile', async (c) => {
   const visible = b.visible ? 1 : 0;
   const gallery = s(b.gallery).split(/[\r\n,]+/).map((x) => x.trim())
     .filter((x) => /^https?:\/\//i.test(x)).slice(0, 12).join('\n');
-  await DB.prepare(`UPDATE performers SET display_name=?, categories=?, bio=?, phone=?, public_email=?, website=?, location=?, price_from=?, price_to=?, genres=?, languages=?, experience=?, youtube_url=?, instagram_url=?, gallery=?, photo=?, active=? WHERE id=?`)
+  await DB.prepare(`UPDATE performers SET display_name=?, categories=?, bio=?, phone=?, public_email=?, website=?, location=?, price_from=?, price_to=?, genres=?, experience=?, youtube_url=?, instagram_url=?, gallery=?, photo=?, active=? WHERE id=?`)
     .bind(s(b.display_name) || user.name, cats.join(','), s(b.bio), s(b.phone), s(b.public_email), s(b.website), s(b.location),
-      s(b.price_from), s(b.price_to), s(b.genres), s(b.languages), s(b.experience), s(b.youtube_url), s(b.instagram_url), gallery,
+      s(b.price_from), s(b.price_to), s(b.genres), s(b.experience), s(b.youtube_url), s(b.instagram_url), gallery,
       photo, visible, p.id).run();
   return c.json({ ok: true });
 });
