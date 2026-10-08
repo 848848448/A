@@ -127,7 +127,7 @@ function viewDirectory() {
         var cover = p.photo ? '<img src="' + e(p.photo) + '" alt="" onerror="this.parentNode.innerHTML=\'<span class=ph>' + e(initials(p.display_name)) + '</span>\'">' : '<span class="ph">' + e(initials(p.display_name)) + '</span>';
         var tags = (cats.length ? cats.slice(0, 3) : [{ icon: 'music_note', label: 'Music' }]).map(function (c) { return '<span class="tag"><span class="material-symbols-rounded">' + c.icon + '</span> ' + c.label + '</span>'; }).join('');
         var free = p.freeCount > 0 ? '<span class="free-pill"><span class="material-symbols-rounded">event_available</span> ' + p.freeCount + ' day' + (p.freeCount === 1 ? '' : 's') + ' open</span>' : '<span class="free-pill none"><span class="material-symbols-rounded">calendar_month</span> See calendar</span>';
-        return '<a href="#/p/' + p.id + '" class="perf-card"><div class="perf-cover">' + cover + (p.featured ? '<span class="perf-featured"><span class="material-symbols-rounded fill">star</span> Featured</span>' : '') + '</div><div class="perf-body"><h3 class="perf-name">' + e(p.display_name) + '</h3><div class="perf-cats">' + tags + '</div>' + (p.location ? '<div class="perf-meta"><span class="material-symbols-rounded">location_on</span> ' + e(p.location) + '</div>' : '') + '<div class="perf-foot">' + free + '<span class="btn btn-tonal btn-sm">View <span class="material-symbols-rounded">arrow_forward</span></span></div></div></a>';
+        return '<a href="#/p/' + p.id + '" class="perf-card"><div class="perf-cover">' + cover + (p.featured ? '<span class="perf-featured"><span class="material-symbols-rounded fill">star</span> Featured</span>' : '') + '</div><div class="perf-body"><h3 class="perf-name">' + e(p.display_name) + (p.verified ? ' <span class="verified-badge"><span class="material-symbols-rounded fill">verified</span></span>' : '') + '</h3><div class="perf-cats">' + tags + '</div>' + (p.location ? '<div class="perf-meta"><span class="material-symbols-rounded">location_on</span> ' + e(p.location) + '</div>' : '') + '<div class="perf-foot">' + free + '<span class="btn btn-tonal btn-sm">View <span class="material-symbols-rounded">arrow_forward</span></span></div></div></a>';
       }).join('') + '</div>';
     }
     setView(
@@ -180,17 +180,18 @@ function viewProfile(id) {
     }).join('');
     var wa = waNumber(p.phone);
     var contact = '';
-    if (p.phone) contact += '<a href="tel:' + e(p.phone) + '"><span class="material-symbols-rounded">call</span> ' + e(p.phone) + '</a>';
-    if (wa) contact += '<a href="https://wa.me/' + wa + '" target="_blank" rel="noopener"><span class="material-symbols-rounded">chat</span> WhatsApp</a>';
-    if (p.public_email) contact += '<a href="mailto:' + e(p.public_email) + '"><span class="material-symbols-rounded">mail</span> ' + e(p.public_email) + '</a>';
+    if (!p.hide_contact && p.phone) contact += '<a href="tel:' + e(p.phone) + '"><span class="material-symbols-rounded">call</span> ' + e(p.phone) + '</a>';
+    if (!p.hide_contact && wa) contact += '<a href="https://wa.me/' + wa + '" target="_blank" rel="noopener"><span class="material-symbols-rounded">chat</span> WhatsApp</a>';
+    if (!p.hide_contact && p.public_email) contact += '<a href="mailto:' + e(p.public_email) + '"><span class="material-symbols-rounded">mail</span> ' + e(p.public_email) + '</a>';
     if (p.website) contact += '<a href="' + e(p.website) + '" target="_blank" rel="noopener"><span class="material-symbols-rounded">language</span> Website</a>';
     if (p.instagram_url) contact += '<a href="' + e(p.instagram_url) + '" target="_blank" rel="noopener"><span class="material-symbols-rounded">photo_camera</span> Instagram</a>';
+    if (p.hide_contact) contact = '<div class="ci muted"><span class="material-symbols-rounded">lock</span> Reach this artist through a booking request.</div>' + contact;
     if (!contact) contact = '<div class="ci muted"><span class="material-symbols-rounded">info</span> Send a booking request below.</div>';
 
     setView(
       '<a href="#/" class="btn btn-ghost btn-sm back-btn" style="margin-bottom:14px"><span class="material-symbols-rounded">arrow_back</span> Back</a>' +
       '<section class="card card-pad"><div class="profile-head">' + avatar(p.display_name, p.photo, 100) +
-      '<div style="flex:1;min-width:200px"><h1 style="font-size:1.6rem">' + e(p.display_name) + '</h1><div class="perf-cats">' + tags + '</div>' +
+      '<div style="flex:1;min-width:200px"><h1 style="font-size:1.6rem">' + e(p.display_name) + (p.verified ? ' <span class="verified-badge"><span class="material-symbols-rounded fill" style="font-size:22px">verified</span></span>' : '') + '</h1><div class="perf-cats">' + tags + '</div>' +
       (extraTags ? '<div class="perf-cats" style="margin-top:6px">' + extraTags + '</div>' : '') +
       '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px" class="muted">' + (rCount ? '<span class="rating-inline">' + starHtml(rAvg) + ' <strong style="color:var(--on-surface)">' + rAvg + '</strong> (' + rCount + ')</span>' : '') + (p.location ? '<span style="display:inline-flex;gap:5px;align-items:center"><span class="material-symbols-rounded">location_on</span>' + e(p.location) + '</span>' : '') + (priceText ? '<span style="display:inline-flex;gap:5px;align-items:center"><span class="material-symbols-rounded">payments</span>' + e(priceText) + '</span>' : '') + (p.experience ? '<span style="display:inline-flex;gap:5px;align-items:center"><span class="material-symbols-rounded">workspace_premium</span>' + e(p.experience) + ' yrs</span>' : '') + '</div></div></div></section>' +
       mediaHtml +
@@ -281,6 +282,7 @@ function viewMyProfile() {
       '<div class="section-head"><h2><span class="material-symbols-rounded">badge</span> My Profile</h2></div>' +
       '<section class="card card-pad"><div style="display:flex;gap:16px;align-items:center;margin-bottom:14px">' + avatar(p.display_name, p.photo, 72) + '<div style="flex:1"><label class="small" style="font-weight:600">Photo link</label><input class="input" id="p-photo" placeholder="https://…" value="' + e(p.photo || '') + '"></div></div>' +
       '<div class="field" style="background:var(--surface-sunken);padding:12px 14px;border-radius:12px"><label style="display:flex;align-items:center;gap:10px;margin:0;cursor:pointer"><input type="checkbox" id="p-visible" ' + (p.active ? 'checked' : '') + ' style="width:20px;height:20px;accent-color:var(--primary)"><span class="material-symbols-rounded" style="color:var(--primary)">public</span> Show me in the directory</label></div>' +
+      '<div class="field" style="background:var(--surface-sunken);padding:12px 14px;border-radius:12px"><label style="display:flex;align-items:center;gap:10px;margin:0;cursor:pointer"><input type="checkbox" id="p-hide" ' + (p.hide_contact ? 'checked' : '') + ' style="width:20px;height:20px;accent-color:var(--primary)"><span class="material-symbols-rounded" style="color:var(--primary)">lock</span> Hide phone &amp; email publicly</label></div>' +
       '<div class="field"><label>Name *</label><input class="input" id="p-name" value="' + e(p.display_name) + '"></div>' +
       '<div class="field"><label>What do you do?</label><div class="cat-select" id="p-cats">' + catSel + '</div></div>' +
       '<div class="field"><label>About you</label><textarea class="textarea" id="p-bio">' + e(p.bio) + '</textarea></div>' +
@@ -299,7 +301,7 @@ function viewMyProfile() {
 function saveProfile() {
   var cats = [];
   document.querySelectorAll('#p-cats input:checked').forEach(function (i) { cats.push(i.value); });
-  var body = { display_name: val('p-name'), categories: cats, bio: val('p-bio'), phone: val('p-phone'), public_email: val('p-email'), website: val('p-web'), location: val('p-loc'), price_from: val('p-price'), price_to: val('p-price2'), genres: val('p-genres'), experience: val('p-exp'), youtube_url: val('p-yt'), instagram_url: val('p-ig'), gallery: val('p-gallery'), photo_url: val('p-photo'), visible: document.getElementById('p-visible').checked };
+  var body = { display_name: val('p-name'), categories: cats, bio: val('p-bio'), phone: val('p-phone'), public_email: val('p-email'), website: val('p-web'), location: val('p-loc'), price_from: val('p-price'), price_to: val('p-price2'), genres: val('p-genres'), experience: val('p-exp'), youtube_url: val('p-yt'), instagram_url: val('p-ig'), gallery: val('p-gallery'), photo_url: val('p-photo'), visible: document.getElementById('p-visible').checked, hide_contact: document.getElementById('p-hide').checked };
   api('/me/profile', { method: 'PUT', body: body }).then(function () { toast('Profile saved!'); }).catch(function (err) { toast(err.message, true); });
 }
 

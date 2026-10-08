@@ -76,6 +76,9 @@ https://picsum.photos/seed/hb3/600/600
 https://picsum.photos/seed/hb4/600/600'
   WHERE user_id=(SELECT id FROM users WHERE email='freilach@example.com') AND genres='';
 
+-- Mark the two spotlight demo artists as verified (showcase only).
+UPDATE performers SET verified=1 WHERE user_id IN (SELECT id FROM users WHERE email IN ('meir@example.com','freilach@example.com')) AND verified=0;
+
 -- A few approved sample reviews (guarded so re-running the seed never duplicates them).
 INSERT INTO reviews (performer_id,author_name,rating,comment,approved)
   SELECT (SELECT id FROM performers WHERE user_id=(SELECT id FROM users WHERE email='meir@example.com')),'Chaim L.',5,'Michael sang at our wedding and it was unbelievable — everyone was talking about it for weeks.',1

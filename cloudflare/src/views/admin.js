@@ -15,6 +15,7 @@ export function adminHome({ people, admins, stats }) {
         <div class="row-main"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <span class="row-title">${e(p.display_name)}</span>
           ${p.featured ? `<span class="status is-booked"><span class="material-symbols-rounded">star</span> Featured</span>` : ''}
+          ${p.verified ? `<span class="status is-accepted"><span class="material-symbols-rounded">verified</span> Verified</span>` : ''}
           ${!p.active ? `<span class="status is-declined"><span class="material-symbols-rounded">visibility_off</span> Hidden</span>` : ''}
           ${p.user_role === 'admin' ? `<span class="status is-accepted"><span class="material-symbols-rounded">shield</span> Admin</span>` : ''}</div>
           <div class="row-sub"><span><span class="material-symbols-rounded">mail</span> ${e(p.user_email)}</span>${catSpans}</div></div>
@@ -22,6 +23,8 @@ export function adminHome({ people, admins, stats }) {
           <a href="/p/${p.id}" class="btn btn-ghost btn-sm" title="View profile"><span class="material-symbols-rounded">visibility</span></a>
           <form action="/admin/performer/${p.id}/flag" method="post" style="display:inline"><input type="hidden" name="field" value="featured" />
             <button class="btn btn-ghost btn-sm" title="Feature"><span class="material-symbols-rounded ${p.featured ? 'fill' : ''}">star</span></button></form>
+          <form action="/admin/performer/${p.id}/flag" method="post" style="display:inline"><input type="hidden" name="field" value="verified" />
+            <button class="btn btn-ghost btn-sm" title="${p.verified ? 'Remove verified' : 'Mark verified'}"><span class="material-symbols-rounded ${p.verified ? 'fill' : ''}" ${p.verified ? 'style="color:var(--accent-ink)"' : ''}>verified</span></button></form>
           <form action="/admin/performer/${p.id}/flag" method="post" style="display:inline"><input type="hidden" name="field" value="active" />
             <button class="btn btn-ghost btn-sm" title="${p.active ? 'Hide' : 'Show'}"><span class="material-symbols-rounded">${p.active ? 'visibility' : 'visibility_off'}</span></button></form>
           <form action="/admin/user/${p.user_id}/password" method="post" style="display:inline" onsubmit="return confirm('Set a new password for ${e(p.display_name)}?')">

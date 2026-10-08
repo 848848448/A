@@ -19,6 +19,7 @@ function headerHtml(user, path) {
     if (user.role === 'admin') nav += link('/admin', path.startsWith('/admin'), 'admin_panel_settings', 'Admin');
     nav += `<form action="/auth/logout" method="post" style="margin:0"><button class="navlink" style="border:none;background:none;cursor:pointer;font-family:inherit"><span class="material-symbols-rounded">logout</span> Log out</button></form>`;
   } else {
+    nav += link('/join', path === '/join', 'how_to_reg', 'Join');
     nav += link('/auth/login', path.startsWith('/auth'), 'login', 'Log in');
   }
   return `<header class="appbar"><div class="container appbar-inner">
@@ -52,7 +53,7 @@ const footerHtml = `<footer class="footer"><div class="container">
     <div class="footer-col"><h4>For artists</h4>
       <a href="/auth/login">Log in</a>
       <a href="/dashboard">My dashboard</a>
-      <a href="/contact">Get listed</a></div>
+      <a href="/join">List yourself</a></div>
     <div class="footer-col"><h4>More</h4>
       <a href="/about">About</a>
       <a href="/contact">Contact</a>

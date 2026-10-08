@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS performers (
   youtube_url   TEXT    NOT NULL DEFAULT '',
   instagram_url TEXT    NOT NULL DEFAULT '',
   gallery       TEXT    NOT NULL DEFAULT '',
+  hide_contact  INTEGER NOT NULL DEFAULT 0,
+  verified      INTEGER NOT NULL DEFAULT 0,
   photo         TEXT    NOT NULL DEFAULT '',
   featured      INTEGER NOT NULL DEFAULT 0,
   active        INTEGER NOT NULL DEFAULT 1,

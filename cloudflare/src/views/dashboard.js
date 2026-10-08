@@ -72,6 +72,10 @@ export function dashProfile({ performer, pendingBadge, user, hasR2 }) {
           <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin:0">
             <input type="checkbox" name="visible" value="1" ${performer.active ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--primary)" />
             <span class="material-symbols-rounded" style="color:var(--primary)">public</span> Show me in the public directory (people can see and book me)</label></div>
+        <div class="field" style="background:var(--surface-sunken);padding:14px 16px;border-radius:var(--radius-md);margin-bottom:22px">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin:0">
+            <input type="checkbox" name="hide_contact" value="1" ${performer.hide_contact ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--primary)" />
+            <span class="material-symbols-rounded" style="color:var(--primary)">lock</span> Hide my phone &amp; email publicly (people reach me through a booking request)</label></div>
         <div class="field"><label>Name (as people see you) *</label><input class="input" type="text" name="display_name" value="${e(performer.display_name)}" required /></div>
         <div class="field"><label>What do you do? (you can pick more than one)</label><div class="cat-select">${catSelect}</div></div>
         <div class="field"><label>A description about you</label><textarea class="textarea" name="bio" placeholder="Tell people about yourself, your style, your experience…">${e(performer.bio)}</textarea></div>

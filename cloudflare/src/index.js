@@ -2,10 +2,10 @@ import { Hono } from 'hono';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 
 import { CATEGORY_MAP } from './lib/constants.js';
-import { todayISO } from './lib/helpers.js';
+import { todayISO, fmtDate } from './lib/helpers.js';
 import { hashPassword, verifyPassword, createSession, getSessionUser, destroySession } from './lib/auth.js';
 import { layout } from './views/layout.js';
-import { indexPage, performerPage, loginPage, errorPage, infoPage, contactPage, savedPage } from './views/pages.js';
+import { indexPage, performerPage, loginPage, errorPage, infoPage, contactPage, savedPage, bookingSentPage, joinPage } from './views/pages.js';
 import { dashHome, dashProfile, dashAvailability, dashBookings, dashSettings } from './views/dashboard.js';
 import { adminHome, adminNew, adminBookings, adminReviews, adminMessages } from './views/admin.js';
 import apiApp from './api.js';
@@ -87,7 +87,7 @@ app.get('/', async (c) => {
   const q = (c.req.query('q') || '').trim();
   const cat = (c.req.query('cat') || '').trim();
   const date = /^\d{4}-\d{2}-\d{2}$/.test(c.req.query('date') || '') ? c.req.query('date') : '';
-  const sort = ['name', 'new', 'available'].includes(c.req.query('sort')) ? c.req.query('sort') : 'featured';
+  const sort = ['name', 'new', 'available', 'rating'].includes(c.req.query('sort')) ? c.req.query('sort') : 'featured';
   let sql = 'SELECT * FROM performers WHERE active = 1';
   const params = [];
   if (q) { sql += ' AND (display_name LIKE ? OR bio LIKE ? OR location LIKE ? OR genres LIKE ?)'; const l = `%${q}%`; params.push(l, l, l, l); }
@@ -111,10 +111,22 @@ app.get('/', async (c) => {
   ).bind(today).all();
   const freeMap = {};
   for (const r of freeRows) freeMap[r.performer_id] = r.c;
-  let performers = results.map((p) => ({ ...p, freeCount: freeMap[p.id] || 0 }));
+  const { results: rateRows } = await DB.prepare(
+    'SELECT performer_id, AVG(rating) AS a, COUNT(*) AS c FROM reviews WHERE approved = 1 GROUP BY performer_id'
+  ).all();
+  const rateMap = {};
+  for (const r of rateRows) rateMap[r.performer_id] = { avg: Math.round(r.a * 10) / 10, count: r.c };
+  let performers = results.map((p) => ({
+    ...p, freeCount: freeMap[p.id] || 0,
+    ratingAvg: rateMap[p.id] ? rateMap[p.id].avg : 0,
+    ratingCount: rateMap[p.id] ? rateMap[p.id].count : 0,
+  }));
   if (sort === 'available') performers = performers.sort((a, b) => b.freeCount - a.freeCount);
+  else if (sort === 'rating') performers = performers.sort((a, b) => (b.ratingAvg - a.ratingAvg) || (b.ratingCount - a.ratingCount));
   const total = (await DB.prepare('SELECT COUNT(*) AS c FROM performers WHERE active = 1').first()).c;
-  return render(c, 'Music Directory', indexPage({ performers, q, cat, total, date, sort }));
+  const showcase = !q && !cat && !date;
+  const featured = showcase ? performers.filter((p) => p.featured).slice(0, 6) : [];
+  return render(c, 'Music Directory', indexPage({ performers, q, cat, total, date, sort, featured, showcase }));
 });
 
 app.get('/p/:id', async (c) => {
@@ -172,13 +184,18 @@ app.post('/p/:id/book', async (c) => {
     flash(c, 'error', 'Please provide your name, a date, and a way to reach you (phone or email).');
     return c.redirect('/p/' + performer.id + '#book');
   }
+  // Don't accept a request for a date the artist already marked taken.
+  const av = await DB.prepare('SELECT status FROM availability WHERE performer_id = ? AND date = ?').bind(performer.id, eventDate).first();
+  if (av && (av.status === 'unavailable' || av.status === 'booked')) {
+    flash(c, 'error', `${performer.display_name} is not available on ${fmtDate(eventDate)}. Please choose a different date.`);
+    return c.redirect('/p/' + performer.id + '#book');
+  }
   await DB.prepare(`INSERT INTO bookings (performer_id, requester_name, requester_phone, requester_email, event_date, event_type, location, message)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).bind(
     performer.id, name, phone, email, eventDate,
     String(b.event_type || '').trim(), String(b.location || '').trim(), String(b.message || '').trim()
   ).run();
-  flash(c, 'success', `Your booking request was sent to ${performer.display_name}. They will get back to you.`);
-  return c.redirect('/p/' + performer.id);
+  return render(c, 'Request sent', bookingSentPage({ performer, eventDate: eventDate, name }));
 });
 
 /* ================= INFO / CONTACT ================= */
@@ -201,6 +218,37 @@ app.post('/contact', async (c) => {
       String(b.subject || '').trim().slice(0, 160), body).run();
   flash(c, 'success', 'Thank you! Your message was sent — we\'ll get back to you.');
   return c.redirect('/contact');
+});
+
+/* ================= ARTIST SELF-SIGNUP ================= */
+app.get('/join', (c) => {
+  if (c.get('user')) return c.redirect('/dashboard');
+  return render(c, 'List yourself', joinPage());
+});
+
+app.post('/join', async (c) => {
+  const DB = c.env.DB;
+  const b = await c.req.parseBody({ all: true });
+  const name = String(b.name || '').trim();
+  const email = String(b.email || '').trim().toLowerCase();
+  const password = String(b.password || '');
+  const displayName = String(b.display_name || name).trim() || name;
+  let cats = b.categories || []; if (!Array.isArray(cats)) cats = [cats]; cats = cats.filter((x) => CATEGORY_MAP[x]);
+  if (!name || !email || password.length < 6) {
+    flash(c, 'error', 'Please provide a name, an email, and a password (at least 6 characters).'); return c.redirect('/join');
+  }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { flash(c, 'error', 'Please enter a valid email address.'); return c.redirect('/join'); }
+  if (await DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first()) {
+    flash(c, 'error', 'An account with that email already exists — try logging in.'); return c.redirect('/join');
+  }
+  const r = await DB.prepare('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)')
+    .bind(name, email, await hashPassword(password), 'performer').run();
+  await DB.prepare('INSERT INTO performers (user_id, display_name, categories, phone, location, active) VALUES (?, ?, ?, ?, ?, 0)')
+    .bind(r.meta.last_row_id, displayName, cats.join(','), String(b.phone || '').trim(), String(b.location || '').trim()).run();
+  const sid = await createSession(DB, r.meta.last_row_id);
+  setCookie(c, 'sid', sid, { path: '/', httpOnly: true, sameSite: 'Lax', secure: isSecure(c), maxAge: 60 * 60 * 24 * 14 });
+  flash(c, 'success', 'Welcome! Complete your profile below — an administrator will review it before it goes public.');
+  return c.redirect('/dashboard/profile');
 });
 
 /* ================= AUTH ================= */
@@ -296,14 +344,15 @@ app.post('/dashboard/profile', async (c) => {
     photo = b.photo_url.trim();
   }
   const visible = b.visible ? 1 : 0;
+  const hideContact = b.hide_contact ? 1 : 0;
   const s = (v) => String(v || '').trim();
   // Keep only well-formed http(s) image links from the gallery textarea.
   const gallery = s(b.gallery).split(/[\r\n,]+/).map((x) => x.trim())
     .filter((x) => /^https?:\/\//i.test(x)).slice(0, 12).join('\n');
-  await DB.prepare(`UPDATE performers SET display_name=?, categories=?, bio=?, phone=?, public_email=?, website=?, location=?, price_from=?, price_to=?, genres=?, experience=?, youtube_url=?, instagram_url=?, gallery=?, photo=?, active=? WHERE id=?`)
+  await DB.prepare(`UPDATE performers SET display_name=?, categories=?, bio=?, phone=?, public_email=?, website=?, location=?, price_from=?, price_to=?, genres=?, experience=?, youtube_url=?, instagram_url=?, gallery=?, hide_contact=?, photo=?, active=? WHERE id=?`)
     .bind(s(b.display_name) || user.name, cats.join(','), s(b.bio), s(b.phone), s(b.public_email), s(b.website), s(b.location),
       s(b.price_from), s(b.price_to), s(b.genres), s(b.experience), s(b.youtube_url), s(b.instagram_url), gallery,
-      photo, visible, p.id).run();
+      hideContact, photo, visible, p.id).run();
   flash(c, 'success', 'Your profile has been saved.');
   return c.redirect('/dashboard/profile');
 });
@@ -530,6 +579,7 @@ app.post('/admin/performer/:id/flag', async (c) => {
   const b = await c.req.parseBody();
   if (b.field === 'active') await DB.prepare('UPDATE performers SET active = ? WHERE id = ?').bind(p.active ? 0 : 1, p.id).run();
   if (b.field === 'featured') await DB.prepare('UPDATE performers SET featured = ? WHERE id = ?').bind(p.featured ? 0 : 1, p.id).run();
+  if (b.field === 'verified') await DB.prepare('UPDATE performers SET verified = ? WHERE id = ?').bind(p.verified ? 0 : 1, p.id).run();
   return c.redirect('/admin');
 });
 

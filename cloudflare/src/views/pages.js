@@ -2,7 +2,7 @@ import { escapeHtml as e, catObjects, initials, MONTHS, fmtDate, weekday, youtub
 import { CATEGORIES, CATEGORY_MAP } from '../lib/constants.js';
 import { avatar } from './layout.js';
 
-export function indexPage({ performers, q, cat, total, date = '', sort = 'featured' }) {
+export function indexPage({ performers, q, cat, total, date = '', sort = 'featured', featured = [], showcase = false }) {
   const qs = (ov) => {
     const o = Object.assign({ q, cat, date, sort }, ov);
     const parts = [];
@@ -12,6 +12,34 @@ export function indexPage({ performers, q, cat, total, date = '', sort = 'featur
     if (o.sort && o.sort !== 'featured') parts.push('sort=' + encodeURIComponent(o.sort));
     return parts.length ? '/?' + parts.join('&') : '/';
   };
+  const starsSm = (n) => { let o = ''; for (let i = 1; i <= 5; i++) o += `<span class="material-symbols-rounded${i <= Math.round(n) ? ' fill' : ''}">star</span>`; return o; };
+  const priceOf = (p) => (p.price_from && p.price_to) ? `${p.price_from} – ${p.price_to}` : (p.price_from || p.price_to || '');
+
+  const card = (p) => {
+    const cats = catObjects(p.categories);
+    const cover = p.photo
+      ? `<img src="${e(p.photo)}" alt="${e(p.display_name)}" />`
+      : `<span class="ph">${e(initials(p.display_name))}</span>`;
+    const cTags = (cats.length ? cats.slice(0, 3) : [{ icon: 'music_note', label: 'Music' }])
+      .map((c) => `<span class="tag"><span class="material-symbols-rounded">${c.icon}</span> ${c.label}</span>`).join('');
+    const free = p.freeCount > 0
+      ? `<span class="free-pill"><span class="material-symbols-rounded">event_available</span> ${p.freeCount} day${p.freeCount === 1 ? '' : 's'} open</span>`
+      : `<span class="free-pill none"><span class="material-symbols-rounded">calendar_month</span> See calendar</span>`;
+    const price = priceOf(p);
+    const rating = p.ratingCount ? `<span class="card-rating">${starsSm(p.ratingAvg)} <strong>${p.ratingAvg}</strong></span>` : '';
+    const metaRow = (rating || price) ? `<div class="card-meta-row">${rating}${price ? `<span class="card-price">${e(price)}</span>` : ''}</div>` : '';
+    const verified = p.verified ? ` <span class="verified-badge" title="Verified artist"><span class="material-symbols-rounded fill">verified</span></span>` : '';
+    return `<a href="/p/${p.id}" class="perf-card">
+      <div class="perf-cover">${cover}
+        <button class="fav-btn" data-fav="${p.id}" onclick="toggleFav(event, ${p.id})" title="Save" aria-label="Save"><span class="material-symbols-rounded">favorite</span></button>
+        ${p.featured ? `<span class="perf-featured"><span class="material-symbols-rounded fill">star</span> Featured</span>` : ''}</div>
+      <div class="perf-body"><h3 class="perf-name">${e(p.display_name)}${verified}</h3><div class="perf-cats">${cTags}</div>
+        ${metaRow}
+        ${p.location ? `<div class="perf-meta"><span class="material-symbols-rounded">location_on</span> ${e(p.location)}</div>` : ''}
+        <div class="perf-foot">${free}<span class="btn btn-tonal btn-sm">View <span class="material-symbols-rounded">arrow_forward</span></span></div>
+      </div></a>`;
+  };
+
   const chips = [`<a href="${qs({ cat: '' })}" class="chip ${!cat ? 'active' : ''}"><span class="material-symbols-rounded">apps</span> All</a>`]
     .concat(CATEGORIES.map((c) =>
       `<a href="${qs({ cat: c.key })}" class="chip ${cat === c.key ? 'active' : ''}"><span class="material-symbols-rounded">${c.icon}</span> ${c.label}</a>`
@@ -26,6 +54,7 @@ export function indexPage({ performers, q, cat, total, date = '', sort = 'featur
     <label class="filter-field"><span class="material-symbols-rounded">sort</span>
       <select name="sort" onchange="this.form.submit()">
         <option value="featured"${sort === 'featured' ? ' selected' : ''}>Featured first</option>
+        <option value="rating"${sort === 'rating' ? ' selected' : ''}>Top rated</option>
         <option value="available"${sort === 'available' ? ' selected' : ''}>Most availability</option>
         <option value="new"${sort === 'new' ? ' selected' : ''}>Newest</option>
         <option value="name"${sort === 'name' ? ' selected' : ''}>Name (A–Z)</option></select></label>
@@ -33,35 +62,40 @@ export function indexPage({ performers, q, cat, total, date = '', sort = 'featur
     ${hasFilters ? `<a href="${qs({ date: '', sort: 'featured' })}" class="btn btn-ghost btn-sm"><span class="material-symbols-rounded">close</span> Clear</a>` : ''}
   </form></section>`;
 
-  const headline = (cat && CATEGORY_MAP[cat]) ? CATEGORY_MAP[cat].label + 's' : 'All music people';
+  // In the default view, feature artists separately so the main grid isn't redundant.
+  const featuredIds = new Set(featured.map((p) => p.id));
+  const gridList = (showcase && featured.length) ? performers.filter((p) => !featuredIds.has(p.id)) : performers;
+  const headline = (cat && CATEGORY_MAP[cat]) ? CATEGORY_MAP[cat].label + 's'
+    : (showcase && featured.length) ? 'All artists' : 'All music people';
 
   let results;
   if (!performers.length) {
     results = `<div class="card card-pad empty"><span class="material-symbols-rounded">search_off</span><p>No music people were found.<br>Try a different search or category.</p></div>`;
+  } else if (!gridList.length) {
+    results = '';
   } else {
-    results = `<div class="grid">` + performers.map((p) => {
-      const cats = catObjects(p.categories);
-      const cover = p.photo
-        ? `<img src="${e(p.photo)}" alt="${e(p.display_name)}" />`
-        : `<span class="ph">${e(initials(p.display_name))}</span>`;
-      const cTags = (cats.length ? cats.slice(0, 3) : [{ icon: 'music_note', label: 'Music' }])
-        .map((c) => `<span class="tag"><span class="material-symbols-rounded">${c.icon}</span> ${c.label}</span>`).join('');
-      const free = p.freeCount > 0
-        ? `<span class="free-pill"><span class="material-symbols-rounded">event_available</span> ${p.freeCount} day${p.freeCount === 1 ? '' : 's'} open</span>`
-        : `<span class="free-pill none"><span class="material-symbols-rounded">calendar_month</span> See calendar</span>`;
-      return `<a href="/p/${p.id}" class="perf-card">
-        <div class="perf-cover">${cover}
-          <button class="fav-btn" data-fav="${p.id}" onclick="toggleFav(event, ${p.id})" title="Save" aria-label="Save"><span class="material-symbols-rounded">favorite</span></button>
-          ${p.featured ? `<span class="perf-featured"><span class="material-symbols-rounded fill">star</span> Featured</span>` : ''}</div>
-        <div class="perf-body"><h3 class="perf-name">${e(p.display_name)}</h3><div class="perf-cats">${cTags}</div>
-          ${p.location ? `<div class="perf-meta"><span class="material-symbols-rounded">location_on</span> ${e(p.location)}</div>` : ''}
-          <div class="perf-foot">${free}<span class="btn btn-tonal btn-sm">View <span class="material-symbols-rounded">arrow_forward</span></span></div>
-        </div></a>`;
-    }).join('') + `</div>`;
+    results = `<div class="grid">` + gridList.map(card).join('') + `</div>`;
   }
 
-  return `<main class="page"><div class="container">
-    <section class="hero">
+  const featuredSection = (showcase && featured.length)
+    ? `<section class="section-gap"><div class="section-head"><h2><span class="material-symbols-rounded fill" style="color:var(--accent-ink)">star</span> Featured artists</h2></div>
+        <div class="grid">${featured.map(card).join('')}</div></section>`
+    : '';
+
+  // hero spotlight (desktop) — highlight a featured (or first) artist
+  const spot = showcase ? (featured[0] || performers[0]) : null;
+  const spotHtml = spot ? `<aside class="spotlight">
+    <div class="overline">In the spotlight</div>
+    <a href="/p/${spot.id}" class="spot-card">
+      ${avatar(spot.display_name, spot.photo, 72)}
+      <div class="spot-main"><div class="spot-name">${e(spot.display_name)}${spot.verified ? ` <span class="verified-badge"><span class="material-symbols-rounded fill">verified</span></span>` : ''}</div>
+        <div class="perf-cats">${(catObjects(spot.categories).slice(0, 2).length ? catObjects(spot.categories).slice(0, 2) : [{ icon: 'music_note', label: 'Music' }]).map((c) => `<span class="tag"><span class="material-symbols-rounded">${c.icon}</span> ${c.label}</span>`).join('')}</div>
+        ${spot.ratingCount ? `<div class="card-rating" style="margin-top:8px">${starsSm(spot.ratingAvg)} <strong>${spot.ratingAvg}</strong> <span class="muted">(${spot.ratingCount})</span></div>` : (spot.location ? `<div class="perf-meta" style="margin-top:8px"><span class="material-symbols-rounded">location_on</span> ${e(spot.location)}</div>` : '')}
+      </div>
+      <span class="material-symbols-rounded spot-arrow">arrow_forward</span>
+    </a></aside>` : '';
+
+  const heroBody = `<div class="hero">
       <div class="hero-note"><span class="material-symbols-rounded">verified</span> ${total} artists on the directory</div>
       <h1>Book the right music for your simcha.</h1>
       <p>Singers, bands, musicians, cantors and entertainers — browse profiles, check who's free on your date, and send a booking request in one place.</p>
@@ -73,12 +107,17 @@ export function indexPage({ performers, q, cat, total, date = '', sort = 'featur
           ${sort !== 'featured' ? `<input type="hidden" name="sort" value="${e(sort)}" />` : ''}</div>
         <button class="btn btn-primary" type="submit"><span class="material-symbols-rounded">search</span> Search</button>
       </form></div>
-    </section>
+    </div>`;
+  const heroSection = spotHtml ? `<section class="hero-grid">${heroBody}${spotHtml}</section>` : heroBody;
+
+  return `<main class="page"><div class="container">
+    ${heroSection}
     <section class="section-gap"><div class="chips">${chips}</div></section>
     ${filterbar}
+    ${featuredSection}
     <section class="section-gap">
       <div class="section-head"><h2><span class="material-symbols-rounded">library_music</span> ${headline}</h2>
-        <div class="muted">${performers.length} result${performers.length === 1 ? '' : 's'}${q ? ' for "' + e(q) + '"' : ''}${date ? ' · free on ' + e(fmtDate(date)) : ''}</div></div>
+        <div class="muted">${gridList.length} ${(showcase && featured.length) ? 'more' : 'result' + (gridList.length === 1 ? '' : 's')}${q ? ' for "' + e(q) + '"' : ''}${date ? ' · free on ' + e(fmtDate(date)) : ''}</div></div>
       ${results}
     </section>
   </div>
@@ -136,20 +175,23 @@ export function performerPage({ performer, days, today, reviews = [], ratingAvg 
   // WhatsApp link derived from the phone number (US numbers get a leading 1).
   const waDigits = (performer.phone || '').replace(/\D/g, '');
   const wa = waDigits ? (waDigits.length === 10 ? '1' + waDigits : waDigits) : '';
+  const hide = !!performer.hide_contact;
   const contact = [
-    performer.phone ? `<a href="tel:${e(performer.phone)}"><span class="material-symbols-rounded">call</span> ${e(performer.phone)}</a>` : '',
-    wa ? `<a href="https://wa.me/${wa}" target="_blank" rel="noopener"><span class="material-symbols-rounded">chat</span> WhatsApp</a>` : '',
-    performer.public_email ? `<a href="mailto:${e(performer.public_email)}"><span class="material-symbols-rounded">mail</span> ${e(performer.public_email)}</a>` : '',
+    (!hide && performer.phone) ? `<a href="tel:${e(performer.phone)}"><span class="material-symbols-rounded">call</span> ${e(performer.phone)}</a>` : '',
+    (!hide && wa) ? `<a href="https://wa.me/${wa}" target="_blank" rel="noopener"><span class="material-symbols-rounded">chat</span> WhatsApp</a>` : '',
+    (!hide && performer.public_email) ? `<a href="mailto:${e(performer.public_email)}"><span class="material-symbols-rounded">mail</span> ${e(performer.public_email)}</a>` : '',
     performer.website ? `<a href="${e(performer.website)}" target="_blank" rel="noopener"><span class="material-symbols-rounded">language</span> Website</a>` : '',
     performer.instagram_url ? `<a href="${e(performer.instagram_url)}" target="_blank" rel="noopener"><span class="material-symbols-rounded">photo_camera</span> Instagram</a>` : '',
   ].join('');
-  const contactBlock = contact || `<div class="ci muted"><span class="material-symbols-rounded">info</span> Send a booking request below to get in touch.</div>`;
+  const contactBlock = (hide
+    ? `<div class="ci muted"><span class="material-symbols-rounded">lock</span> This artist prefers to be reached through a booking request.</div>`
+    : '') + (contact || (hide ? '' : `<div class="ci muted"><span class="material-symbols-rounded">info</span> Send a booking request below to get in touch.</div>`));
 
   return `<main class="page"><div class="container">
     <a href="/" class="btn btn-ghost btn-sm" style="margin-bottom:16px"><span class="material-symbols-rounded">arrow_back</span> Back to the directory</a>
     <section class="card card-pad"><div class="profile-head">
       ${avatar(performer.display_name, performer.photo, 120)}
-      <div style="flex:1;min-width:240px"><h1>${e(performer.display_name)}</h1>
+      <div style="flex:1;min-width:240px"><h1>${e(performer.display_name)}${performer.verified ? ` <span class="verified-badge" style="vertical-align:middle" title="Verified artist"><span class="material-symbols-rounded fill" style="font-size:26px">verified</span></span>` : ''}</h1>
         <div class="perf-cats">${catTags}</div>
         ${genres.length ? `<div class="perf-cats" style="margin-top:8px">
           ${genres.map((g) => `<span class="tag"><span class="material-symbols-rounded">music_note</span> ${e(g)}</span>`).join('')}
@@ -227,7 +269,7 @@ export function loginPage({ next }) {
       <button class="btn btn-primary btn-block" type="submit"><span class="material-symbols-rounded">login</span> Sign in</button>
     </form>
     <div class="divider"></div>
-    <p class="muted small" style="text-align:center;margin:0"><span class="material-symbols-rounded" style="font-size:16px;vertical-align:-3px">info</span> Don't have an account yet? An administrator will open one for you.</p>
+    <p class="muted small" style="text-align:center;margin:0">Are you an artist? <a href="/join" style="color:var(--accent-ink);font-weight:700">List yourself</a> — it's free.</p>
   </div></main>`;
 }
 
@@ -302,6 +344,41 @@ export function savedPage() {
       <a href="/" class="btn btn-ghost btn-sm"><span class="material-symbols-rounded">search</span> Browse all</a></div>
     <div id="savedGrid"><div class="loading-saved muted" style="padding:20px 0">Loading…</div></div>
   </div></main>`;
+}
+
+export function bookingSentPage({ performer, eventDate, name }) {
+  return `<main class="page"><div class="container" style="max-width:580px">
+    <section class="card card-pad" style="text-align:center">
+      <div class="success-check"><span class="material-symbols-rounded fill">check_circle</span></div>
+      <h1 style="margin:16px 0 8px;font-size:1.7rem;font-weight:800;letter-spacing:-0.03em">Request sent!</h1>
+      <p style="margin:0 0 6px">Thanks ${e(name)} — your request for <strong>${e(fmtDate(eventDate))}</strong> was sent to <strong>${e(performer.display_name)}</strong>.</p>
+      <p class="muted small" style="margin:0">They'll review it and reach out using the contact details you gave.</p>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:24px">
+        <a href="/p/${performer.id}" class="btn btn-outline"><span class="material-symbols-rounded">arrow_back</span> Back to profile</a>
+        <a href="/" class="btn btn-primary"><span class="material-symbols-rounded">search</span> Browse more artists</a>
+      </div>
+    </section>
+  </div></main>`;
+}
+
+export function joinPage() {
+  const catSelect = CATEGORIES.map((c) =>
+    `<label><input type="checkbox" name="categories" value="${c.key}" /><span class="material-symbols-rounded">${c.icon}</span> ${c.label}</label>`
+  ).join('');
+  return `<main class="page"><div class="container" style="max-width:720px">
+    <div class="section-head"><h2><span class="material-symbols-rounded">how_to_reg</span> List yourself as an artist</h2></div>
+    <p class="muted" style="margin:-8px 0 20px">Create your free profile. Once you sign up, an administrator reviews it — then it goes live in the directory and people can find and book you.</p>
+    <form action="/join" method="post"><section class="card card-pad">
+      <div class="form-grid"><div class="field"><label>Your name *</label><input class="input" type="text" name="name" required /></div>
+        <div class="field"><label>Name on your profile</label><input class="input" type="text" name="display_name" placeholder="Leave empty = same name" /></div></div>
+      <div class="form-grid"><div class="field"><label>Email (to log in) *</label><input class="input" type="email" name="email" required /></div>
+        <div class="field"><label>Password *</label><input class="input" type="password" name="password" required minlength="6" /><div class="hint">At least 6 characters.</div></div></div>
+      <div class="form-grid"><div class="field"><label>Phone</label><input class="input" type="tel" name="phone" /></div>
+        <div class="field"><label>Location / area</label><input class="input" type="text" name="location" placeholder="Brooklyn, Monsey…" /></div></div>
+      <div class="field"><label>What do you do? (pick one or more)</label><div class="cat-select">${catSelect}</div></div>
+      <button class="btn btn-primary" type="submit"><span class="material-symbols-rounded">how_to_reg</span> Create my profile</button>
+      <p class="hint muted small" style="margin-top:12px">Already have an account? <a href="/auth/login" style="color:var(--accent-ink);font-weight:700">Log in</a>.</p>
+    </section></form></div></main>`;
 }
 
 export function errorPage({ code, message }) {
