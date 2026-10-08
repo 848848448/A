@@ -95,7 +95,16 @@ api.get('/performers', async (c) => {
   ).bind(today).all();
   const freeMap = {};
   for (const r of freeRows) freeMap[r.performer_id] = r.c;
-  const performers = results.map((p) => ({ ...p, freeCount: freeMap[p.id] || 0 }));
+  const { results: rateRows } = await DB.prepare(
+    'SELECT performer_id, AVG(rating) AS a, COUNT(*) AS c FROM reviews WHERE approved = 1 GROUP BY performer_id'
+  ).all();
+  const rateMap = {};
+  for (const r of rateRows) rateMap[r.performer_id] = { avg: Math.round(r.a * 10) / 10, count: r.c };
+  const performers = results.map((p) => ({
+    ...p, freeCount: freeMap[p.id] || 0,
+    ratingAvg: rateMap[p.id] ? rateMap[p.id].avg : 0,
+    ratingCount: rateMap[p.id] ? rateMap[p.id].count : 0,
+  }));
   return c.json({ performers, total: performers.length });
 });
 

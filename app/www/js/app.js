@@ -2,6 +2,8 @@
 'use strict';
 
 var API_BASE = 'https://muzik-direktorie.abdeveloping.workers.dev/api';
+var API_ORIGIN = API_BASE.replace(/\/api\/?$/, '');
+var APP_VERSION = '__APP_VERSION__'; // stamped at build time
 
 var CATEGORIES = [
   { key: 'singer', label: 'Singer', icon: 'mic' },
@@ -38,6 +40,7 @@ try { state.token = localStorage.getItem('md-token'); } catch (e) {}
 function e(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 function hue(s) { var h = 0; s = String(s); for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; return h; }
 function initials(n) { var p = String(n || '').trim().split(/\s+/).filter(Boolean); if (!p.length) return '♪'; if (p.length === 1) return p[0].slice(0, 2); return (p[0][0] || '') + (p[1][0] || ''); }
+function starsSmHtml(n) { var o = ''; for (var i = 1; i <= 5; i++) o += '<span class="material-symbols-rounded' + (i <= Math.round(n) ? ' fill' : '') + '">star</span>'; return o; }
 function fmtDate(iso) { if (!iso) return ''; var a = iso.split('-'); if (a.length < 3) return iso; return MONTHS[+a[1] - 1] + ' ' + (+a[2]) + ', ' + a[0]; }
 function weekday(iso) { if (!iso) return ''; var d = new Date(iso + 'T00:00:00Z'); return ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][d.getUTCDay()]; }
 function todayISO() { return new Date().toISOString().slice(0, 10); }
@@ -127,7 +130,10 @@ function viewDirectory() {
         var cover = p.photo ? '<img src="' + e(p.photo) + '" alt="" onerror="this.parentNode.innerHTML=\'<span class=ph>' + e(initials(p.display_name)) + '</span>\'">' : '<span class="ph">' + e(initials(p.display_name)) + '</span>';
         var tags = (cats.length ? cats.slice(0, 3) : [{ icon: 'music_note', label: 'Music' }]).map(function (c) { return '<span class="tag"><span class="material-symbols-rounded">' + c.icon + '</span> ' + c.label + '</span>'; }).join('');
         var free = p.freeCount > 0 ? '<span class="free-pill"><span class="material-symbols-rounded">event_available</span> ' + p.freeCount + ' day' + (p.freeCount === 1 ? '' : 's') + ' open</span>' : '<span class="free-pill none"><span class="material-symbols-rounded">calendar_month</span> See calendar</span>';
-        return '<a href="#/p/' + p.id + '" class="perf-card"><div class="perf-cover">' + cover + (p.featured ? '<span class="perf-featured"><span class="material-symbols-rounded fill">star</span> Featured</span>' : '') + '</div><div class="perf-body"><h3 class="perf-name">' + e(p.display_name) + (p.verified ? ' <span class="verified-badge"><span class="material-symbols-rounded fill">verified</span></span>' : '') + '</h3><div class="perf-cats">' + tags + '</div>' + (p.location ? '<div class="perf-meta"><span class="material-symbols-rounded">location_on</span> ' + e(p.location) + '</div>' : '') + '<div class="perf-foot">' + free + '<span class="btn btn-tonal btn-sm">View <span class="material-symbols-rounded">arrow_forward</span></span></div></div></a>';
+        var price = (p.price_from && p.price_to) ? (p.price_from + ' – ' + p.price_to) : (p.price_from || p.price_to || '');
+        var rating = p.ratingCount ? '<span class="card-rating">' + starsSmHtml(p.ratingAvg) + ' <strong>' + p.ratingAvg + '</strong></span>' : '';
+        var metaRow = (rating || price) ? '<div class="card-meta-row">' + rating + (price ? '<span class="card-price">' + e(price) + '</span>' : '') + '</div>' : '';
+        return '<a href="#/p/' + p.id + '" class="perf-card"><div class="perf-cover">' + cover + (p.featured ? '<span class="perf-featured"><span class="material-symbols-rounded fill">star</span> Featured</span>' : '') + '</div><div class="perf-body"><h3 class="perf-name">' + e(p.display_name) + (p.verified ? ' <span class="verified-badge"><span class="material-symbols-rounded fill">verified</span></span>' : '') + '</h3><div class="perf-cats">' + tags + '</div>' + metaRow + (p.location ? '<div class="perf-meta"><span class="material-symbols-rounded">location_on</span> ' + e(p.location) + '</div>' : '') + '<div class="perf-foot">' + free + '<span class="btn btn-tonal btn-sm">View <span class="material-symbols-rounded">arrow_forward</span></span></div></div></a>';
       }).join('') + '</div>';
     }
     setView(
@@ -370,6 +376,9 @@ function viewSettings() {
     '<div class="field"><label>Current password</label><input class="input" id="s-cur" type="password"></div>' +
     '<div class="fieldrow"><div class="field"><label>New</label><input class="input" id="s-new" type="password"></div><div class="field"><label>Confirm</label><input class="input" id="s-conf" type="password"></div></div>' +
     '<button class="btn btn-primary" onclick="changePass()"><span class="material-symbols-rounded">save</span> Change password</button></section>' +
+    '<section class="card card-pad" style="margin-bottom:16px"><div class="section-head" style="margin-bottom:10px"><h2 style="font-size:1.1rem"><span class="material-symbols-rounded">install_mobile</span> App updates</h2></div>' +
+    '<p class="muted small" style="margin:0 0 12px">You have the latest features automatically when you update. Current version: <strong>' + e(APP_VERSION) + '</strong></p>' +
+    '<button class="btn btn-tonal" onclick="checkForUpdate(true)"><span class="material-symbols-rounded">refresh</span> Check for updates</button></section>' +
     '<button class="btn btn-danger btn-block" onclick="logout()"><span class="material-symbols-rounded">logout</span> Log out</button>'
   );
   syncTheme();
@@ -452,6 +461,44 @@ function showError(err) {
   syncTheme();
 }
 
+/* ---------- in-app updates (OTA) ---------- */
+function capUpdater() {
+  return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.CapacitorUpdater) || null;
+}
+function notifyReady() { var u = capUpdater(); if (u && u.notifyAppReady) { try { u.notifyAppReady(); } catch (e) {} } }
+var _pendingUpdate = null;
+function checkForUpdate(manual) {
+  fetch(API_ORIGIN + '/app/latest.json', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+    // APP_VERSION is stamped into this exact bundle, so it reflects what's running.
+    if (d && d.version && d.version !== APP_VERSION) {
+      _pendingUpdate = d; showUpdateBanner(); if (manual) toast('Update available!');
+    } else if (manual) { toast('You already have the latest version.'); }
+  }).catch(function () { if (manual) toast('Could not check for updates.', true); });
+}
+function showUpdateBanner() {
+  if (document.getElementById('md-update')) return;
+  var bar = document.createElement('div');
+  bar.id = 'md-update'; bar.className = 'update-banner';
+  bar.innerHTML = '<span class="material-symbols-rounded">rocket_launch</span><span style="flex:1;font-weight:700">A new update is available</span>' +
+    '<button class="btn btn-sm" id="md-update-btn">Update</button>';
+  document.body.appendChild(bar);
+  document.getElementById('md-update-btn').addEventListener('click', doUpdate);
+}
+function doUpdate() {
+  var u = capUpdater();
+  if (!u) { toast('Updates are available in the installed app.', true); return; }
+  if (!_pendingUpdate) return;
+  var btn = document.getElementById('md-update-btn'); if (btn) { btn.textContent = 'Updating…'; btn.disabled = true; }
+  var d = _pendingUpdate;
+  var url = /^https?:/.test(d.url) ? d.url : API_ORIGIN + d.url;
+  u.download({ url: url, version: d.version }).then(function (bundle) {
+    return u.set(bundle);
+  }).then(function () { return u.reload(); }).catch(function (err) {
+    toast('Update failed: ' + (err && err.message || 'please try again'), true);
+    if (btn) { btn.textContent = 'Update'; btn.disabled = false; }
+  });
+}
+
 /* ---------- router ---------- */
 function router() {
   var h = parseHash();
@@ -475,6 +522,8 @@ window.addEventListener('hashchange', router);
 /* ---------- boot ---------- */
 (function boot() {
   appEl = document.getElementById('app');
+  notifyReady();
+  setTimeout(function () { checkForUpdate(false); }, 1500);
   if (state.token) {
     api('/session').then(function (d) { state.user = d.user; if (!d.user) { state.token = null; try { localStorage.removeItem('md-token'); } catch (e) {} } router(); }).catch(function () { router(); });
   } else {

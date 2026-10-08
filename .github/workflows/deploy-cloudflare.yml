@@ -119,6 +119,18 @@ jobs:
         working-directory: cloudflare
         run: sed -i "s/__BUILD_VERSION__/${GITHUB_SHA:0:12}/" public/sw.js
 
+      - name: Build the app update bundle (OTA)
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          set -e
+          VER="${GITHUB_SHA:0:12}"
+          # Stamp the app's version into the bundle so it matches the manifest.
+          sed -i "s/__APP_VERSION__/$VER/" app/www/js/app.js
+          mkdir -p cloudflare/public/app
+          (cd app/www && zip -qr "$GITHUB_WORKSPACE/cloudflare/public/app/bundle-$VER.zip" . -x '*.DS_Store')
+          printf '{"version":"%s","url":"/app/bundle-%s.zip"}\n' "$VER" "$VER" > cloudflare/public/app/latest.json
+          echo "OTA bundle built for $VER:"; ls -la cloudflare/public/app
+
       - name: Deploy the Worker
         if: steps.check.outputs.ready == 'true'
         working-directory: cloudflare

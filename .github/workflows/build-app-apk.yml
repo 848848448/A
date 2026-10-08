@@ -17,6 +17,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Stamp app version (for in-app updates)
+        run: sed -i "s/__APP_VERSION__/${GITHUB_SHA:0:12}/" app/www/js/app.js
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
