@@ -1,0 +1,137 @@
+name: Deploy to Cloudflare
+
+# Deploys the Cloudflare Worker (cloudflare/ folder) entirely on GitHub's
+# servers, so no computer or terminal is needed. It creates the D1 database if
+# missing, loads the tables, seeds the first admin + samples, and deploys.
+#
+# One-time setup (all from a web browser, phone is fine):
+#   1. Create a free Cloudflare account.
+#   2. Create a Cloudflare API token with these account permissions:
+#        - Workers Scripts : Edit
+#        - D1 : Edit
+#        - Account Settings : Read
+#      and copy your Account ID (Cloudflare dashboard, right-hand sidebar).
+#   3. In this repo: Settings -> Secrets and variables -> Actions -> New
+#      repository secret, add:
+#        - CLOUDFLARE_API_TOKEN   = the token
+#        - CLOUDFLARE_ACCOUNT_ID  = your account id
+#   4. Actions tab -> "Deploy to Cloudflare" -> Run workflow.
+#
+# Until both secrets are set, this workflow succeeds but skips the deploy, so it
+# never shows a red X before setup is done.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/hopeful-dirac-7350aq, main]
+    paths:
+      - 'cloudflare/**'
+      - '.github/workflows/deploy-cloudflare.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Check Cloudflare secrets
+        id: check
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::notice::Cloudflare secrets are not set yet, so the deploy is skipped. Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID under Settings -> Secrets and variables -> Actions, then run this workflow again."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.check.outputs.ready == 'true'
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        if: steps.check.outputs.ready == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        if: steps.check.outputs.ready == 'true'
+        working-directory: cloudflare
+        run: npm install
+
+      - name: Ensure D1 database exists and wire up its id
+        if: steps.check.outputs.ready == 'true'
+        working-directory: cloudflare
+        run: |
+          set -e
+          get_id() {
+            npx --yes wrangler d1 list --json 2>/dev/null \
+              | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const a=JSON.parse(s);const m=(Array.isArray(a)?a:[]).find(x=>x.name==='muzik-db');process.stdout.write(m?(m.uuid||m.database_id||''):'')}catch(e){process.stdout.write('')}})"
+          }
+          ID="$(get_id)"
+          if [ -z "$ID" ]; then
+            echo "Creating D1 database 'muzik-db'…"
+            npx --yes wrangler d1 create muzik-db || true
+            ID="$(get_id)"
+          fi
+          if [ -z "$ID" ]; then
+            echo "Could not determine the D1 database id. Check that the API token has D1 : Edit permission."
+            exit 1
+          fi
+          echo "Using D1 database id: $ID"
+          sed -i "s/database_id = \"[^\"]*\"/database_id = \"$ID\"/" wrangler.toml
+
+      - name: Create tables
+        if: steps.check.outputs.ready == 'true'
+        working-directory: cloudflare
+        run: npx --yes wrangler d1 execute muzik-db --remote --file=schema.sql --yes
+
+      - name: Apply column migrations (safe to re-run)
+        if: steps.check.outputs.ready == 'true'
+        working-directory: cloudflare
+        run: |
+          # Add newer performer columns to databases created before they existed.
+          # ALTER TABLE ... ADD COLUMN errors with "duplicate column" once applied,
+          # so each runs on its own and a failure is ignored.
+          for col in \
+            "price_to TEXT NOT NULL DEFAULT ''" \
+            "genres TEXT NOT NULL DEFAULT ''" \
+            "languages TEXT NOT NULL DEFAULT ''" \
+            "experience TEXT NOT NULL DEFAULT ''" \
+            "youtube_url TEXT NOT NULL DEFAULT ''" \
+            "instagram_url TEXT NOT NULL DEFAULT ''" \
+            "gallery TEXT NOT NULL DEFAULT ''" \
+            "hide_contact INTEGER NOT NULL DEFAULT 0" \
+            "verified INTEGER NOT NULL DEFAULT 0"; do
+            echo "migrate: performers.$col"
+            npx --yes wrangler d1 execute muzik-db --remote --yes \
+              --command "ALTER TABLE performers ADD COLUMN $col" || true
+          done
+
+      - name: Seed admin + sample data (safe to re-run)
+        if: steps.check.outputs.ready == 'true'
+        working-directory: cloudflare
+        run: npx --yes wrangler d1 execute muzik-db --remote --file=seed.sql --yes
+
+      - name: Stamp the service worker with this build's version
+        if: steps.check.outputs.ready == 'true'
+        working-directory: cloudflare
+        run: sed -i "s/__BUILD_VERSION__/${GITHUB_SHA:0:12}/" public/sw.js
+
+      - name: Build the app update bundle (OTA)
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          set -e
+          VER="${GITHUB_SHA:0:12}"
+          # Stamp the app's version into the bundle so it matches the manifest.
+          sed -i "s/__APP_VERSION__/$VER/" app/www/js/app.js
+          mkdir -p cloudflare/public/app
+          (cd app/www && zip -qr "$GITHUB_WORKSPACE/cloudflare/public/app/bundle-$VER.zip" . -x '*.DS_Store')
+          printf '{"version":"%s","url":"/app/bundle-%s.zip"}\n' "$VER" "$VER" > cloudflare/public/app/latest.json
+          echo "OTA bundle built for $VER:"; ls -la cloudflare/public/app
+
+      - name: Deploy the Worker
+        if: steps.check.outputs.ready == 'true'
+        working-directory: cloudflare
+        run: npx --yes wrangler deploy

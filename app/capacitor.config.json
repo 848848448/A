@@ -1,0 +1,13 @@
+{
+  "appId": "com.musicdirectory.app",
+  "appName": "Music Directory",
+  "webDir": "www",
+  "backgroundColor": "#ffffff",
+  "server": {
+    "url": "https://muzik-direktorie.abdeveloping.workers.dev",
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#ffffff"
+  }
+}

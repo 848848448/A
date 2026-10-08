@@ -1,0 +1,58 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+
+<main class="page">
+  <div class="container">
+    <div class="dash">
+      <%- include('../partials/dashnav', { active: 'bookings' }) %>
+      <div>
+        <div class="section-head"><h2><span class="material-symbols-rounded">event</span> Bookings</h2></div>
+
+        <div class="chips" style="margin-bottom:20px">
+          <% var filters = [['all','All','list'],['pending','Pending','schedule'],['accepted','Confirmed','check_circle'],['declined','Declined','cancel']]; %>
+          <% filters.forEach(function(f){ %>
+            <a href="/dashboard/bookings<%= f[0]==='all' ? '' : '?status='+f[0] %>" class="chip <%= filter === f[0] ? 'active' : '' %>">
+              <span class="material-symbols-rounded"><%= f[2] %></span> <%= f[1] %>
+            </a>
+          <% }) %>
+        </div>
+
+        <% if (bookings.length === 0) { %>
+          <div class="card card-pad empty"><span class="material-symbols-rounded">inbox</span><p>No bookings here.</p></div>
+        <% } else { %>
+          <div class="list">
+            <% bookings.forEach(function(b){ var st = constants.BOOKING_STATUS[b.status]; %>
+              <div class="row-card">
+                <div class="row-main">
+                  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <span class="row-title"><%= b.requester_name %></span>
+                    <span class="status <%= st.cls %>"><span class="material-symbols-rounded"><%= st.icon %></span> <%= st.label %></span>
+                  </div>
+                  <div class="row-sub">
+                    <span><span class="material-symbols-rounded">calendar_today</span> <%= h.fmtDate(b.event_date) %> (<%= h.weekday(b.event_date) %>)</span>
+                    <% if (b.event_type) { %><span><span class="material-symbols-rounded">celebration</span> <%= b.event_type %></span><% } %>
+                    <% if (b.location) { %><span><span class="material-symbols-rounded">location_on</span> <%= b.location %></span><% } %>
+                  </div>
+                  <div class="row-sub">
+                    <% if (b.requester_phone) { %><span><a href="tel:<%= b.requester_phone %>" style="color:var(--primary)"><span class="material-symbols-rounded">call</span> <%= b.requester_phone %></a></span><% } %>
+                    <% if (b.requester_email) { %><span><a href="mailto:<%= b.requester_email %>" style="color:var(--primary)"><span class="material-symbols-rounded">mail</span> <%= b.requester_email %></a></span><% } %>
+                  </div>
+                  <% if (b.message) { %><div class="muted small" style="margin-top:8px;padding:10px 12px;background:var(--surface-sunken);border-radius:10px"><%= b.message %></div><% } %>
+                </div>
+                <div class="row-actions">
+                  <form action="/dashboard/bookings/<%= b.id %>" method="post" style="display:flex;gap:8px;flex-wrap:wrap">
+                    <% if (b.status !== 'accepted') { %><button class="btn btn-primary btn-sm" name="action" value="accept"><span class="material-symbols-rounded">check</span> Confirm</button><% } %>
+                    <% if (b.status !== 'declined') { %><button class="btn btn-ghost btn-sm" name="action" value="decline"><span class="material-symbols-rounded">block</span> Decline</button><% } %>
+                    <button class="btn btn-danger btn-sm" name="action" value="delete" onclick="return confirm('Delete this booking?')"><span class="material-symbols-rounded">delete</span></button>
+                  </form>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>

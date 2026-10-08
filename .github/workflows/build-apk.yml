@@ -1,0 +1,75 @@
+name: Build Android APK
+
+# Builds a signed Android APK (a Trusted Web Activity that loads the live site)
+# on GitHub's runners, and uploads it as a downloadable artifact.
+# Because the app loads the live website, content/feature updates appear
+# automatically — no need to rebuild or reinstall the APK.
+#
+# Run it from the Actions tab -> "Build Android APK" -> Run workflow.
+# When it finishes, open the run and download the "music-directory-apk" artifact.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      BUBBLEWRAP_KEYSTORE_PASSWORD: muzikdirektorie2026
+      BUBBLEWRAP_KEY_PASSWORD: muzikdirektorie2026
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0 platforms;android-33 build-tools;33.0.2'
+
+      - name: Install Bubblewrap
+        run: npm install -g @bubblewrap/cli
+
+      - name: Point Bubblewrap at the JDK and Android SDK
+        run: |
+          mkdir -p "$HOME/.bubblewrap"
+          cat > "$HOME/.bubblewrap/config.json" <<JSON
+          { "jdkPath": "${JAVA_HOME}", "androidSdkPath": "${ANDROID_SDK_ROOT}" }
+          JSON
+          echo "jdk: $JAVA_HOME"
+          echo "sdk: $ANDROID_SDK_ROOT"
+
+      - name: Generate the Android project
+        working-directory: apk
+        run: bubblewrap update --skipVersionUpgrade || bubblewrap update
+
+      - name: Build and sign the APK
+        working-directory: apk
+        run: |
+          set -e
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease
+          UNSIGNED=$(find . -path '*release*' -name '*.apk' | grep -i unsigned | head -1)
+          [ -z "$UNSIGNED" ] && UNSIGNED=$(find . -path '*release*' -name '*.apk' | head -1)
+          echo "unsigned APK: $UNSIGNED"
+          BT="$(ls -d "$ANDROID_SDK_ROOT"/build-tools/* | sort -V | tail -1)"
+          echo "build-tools: $BT"
+          "$BT/zipalign" -v -p 4 "$UNSIGNED" app-release-aligned.apk
+          "$BT/apksigner" sign --ks android.keystore --ks-key-alias muzik \
+            --ks-pass pass:muzikdirektorie2026 --key-pass pass:muzikdirektorie2026 \
+            --out music-directory.apk app-release-aligned.apk
+          "$BT/apksigner" verify --verbose music-directory.apk
+          ls -la music-directory.apk
+
+      - name: Upload the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: music-directory-apk
+          path: apk/music-directory.apk
+          if-no-files-found: error

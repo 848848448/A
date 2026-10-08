@@ -1,0 +1,35 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+
+<main class="page">
+  <div class="container">
+    <div class="dash">
+      <%- include('../partials/dashnav', { active: 'settings' }) %>
+      <div>
+        <div class="section-head"><h2><span class="material-symbols-rounded">settings</span> Settings</h2></div>
+
+        <section class="card card-pad" style="margin-bottom:20px">
+          <div class="row-sub" style="font-size:1rem">
+            <span><span class="material-symbols-rounded">person</span> <%= currentUser.name %></span>
+            <span><span class="material-symbols-rounded">mail</span> <%= currentUser.email %></span>
+            <span><span class="material-symbols-rounded">shield</span> <%= currentUser.role === 'admin' ? 'Administrator' : 'Music person' %></span>
+          </div>
+        </section>
+
+        <section class="card card-pad">
+          <div class="section-head" style="margin-bottom:12px"><h2 style="font-size:1.2rem"><span class="material-symbols-rounded">password</span> Change password</h2></div>
+          <form action="/auth/password" method="post">
+            <div class="field"><label>Current password</label><input class="input" type="password" name="current" required /></div>
+            <div class="form-grid">
+              <div class="field"><label>New password</label><input class="input" type="password" name="next_password" required /></div>
+              <div class="field"><label>Confirm new password</label><input class="input" type="password" name="confirm" required /></div>
+            </div>
+            <button class="btn btn-primary" type="submit"><span class="material-symbols-rounded">save</span> Change password</button>
+          </form>
+        </section>
+      </div>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>

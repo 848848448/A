@@ -1,0 +1,61 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+
+<main class="page">
+  <div class="container">
+    <div class="dash">
+      <%- include('../partials/dashnav', { active: 'home' }) %>
+      <div>
+        <div class="section-head">
+          <h2><span class="material-symbols-rounded">waving_hand</span> Hi, <%= performer.display_name %></h2>
+          <a href="/p/<%= performer.id %>" class="btn btn-outline btn-sm"><span class="material-symbols-rounded">visibility</span> View my public profile</a>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat"><div class="ic ic-a"><span class="material-symbols-rounded">schedule</span></div><div><div class="num"><%= stats.pending %></div><div class="lbl">Pending bookings</div></div></div>
+          <div class="stat"><div class="ic ic-s"><span class="material-symbols-rounded">check_circle</span></div><div><div class="num"><%= stats.accepted %></div><div class="lbl">Confirmed bookings</div></div></div>
+          <div class="stat"><div class="ic ic-p"><span class="material-symbols-rounded">event_available</span></div><div><div class="num"><%= stats.free %></div><div class="lbl">Free days ahead</div></div></div>
+        </div>
+
+        <section class="section-gap">
+          <div class="section-head" style="margin-bottom:12px"><h2 style="font-size:1.25rem"><span class="material-symbols-rounded">upcoming</span> Upcoming bookings</h2>
+            <a href="/dashboard/bookings" class="btn btn-ghost btn-sm">All <span class="material-symbols-rounded">arrow_forward</span></a>
+          </div>
+          <% if (upcoming.length === 0) { %>
+            <div class="card card-pad empty"><span class="material-symbols-rounded">event_note</span><p>No upcoming bookings yet.</p></div>
+          <% } else { %>
+            <div class="list">
+              <% upcoming.forEach(function(b){ var st = constants.BOOKING_STATUS[b.status]; %>
+                <div class="row-card">
+                  <div class="row-main">
+                    <div class="row-title"><%= b.requester_name %><% if (b.event_type) { %> · <span class="muted" style="font-weight:500"><%= b.event_type %></span><% } %></div>
+                    <div class="row-sub">
+                      <span><span class="material-symbols-rounded">calendar_today</span> <%= h.fmtDate(b.event_date) %> (<%= h.weekday(b.event_date) %>)</span>
+                      <% if (b.location) { %><span><span class="material-symbols-rounded">location_on</span> <%= b.location %></span><% } %>
+                    </div>
+                  </div>
+                  <span class="status <%= st.cls %>"><span class="material-symbols-rounded"><%= st.icon %></span> <%= st.label %></span>
+                </div>
+              <% }) %>
+            </div>
+          <% } %>
+        </section>
+
+        <section class="section-gap">
+          <div class="card card-pad">
+            <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+              <span class="material-symbols-rounded" style="font-size:40px;color:var(--primary)">tips_and_updates</span>
+              <div style="flex:1;min-width:200px">
+                <strong>Complete your profile</strong>
+                <div class="muted small">Add a photo, a description and your categories — this helps people find you more easily.</div>
+              </div>
+              <a href="/dashboard/profile" class="btn btn-tonal"><span class="material-symbols-rounded">edit</span> Edit profile</a>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>

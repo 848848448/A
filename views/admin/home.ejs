@@ -1,0 +1,66 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+
+<main class="page">
+  <div class="container">
+    <div class="section-head">
+      <h2><span class="material-symbols-rounded">admin_panel_settings</span> Admin Panel</h2>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <a href="/admin/bookings" class="btn btn-outline"><span class="material-symbols-rounded">event</span> All bookings</a>
+        <a href="/admin/new" class="btn btn-primary"><span class="material-symbols-rounded">person_add</span> Open new account</a>
+      </div>
+    </div>
+
+    <div class="stat-row" style="margin-bottom:26px">
+      <div class="stat"><div class="ic ic-p"><span class="material-symbols-rounded">group</span></div><div><div class="num"><%= stats.people %></div><div class="lbl">Music people</div></div></div>
+      <div class="stat"><div class="ic ic-a"><span class="material-symbols-rounded">schedule</span></div><div><div class="num"><%= stats.pending %></div><div class="lbl">Pending bookings</div></div></div>
+      <div class="stat"><div class="ic ic-s"><span class="material-symbols-rounded">event</span></div><div><div class="num"><%= stats.bookings %></div><div class="lbl">Total bookings</div></div></div>
+    </div>
+
+    <div class="section-head" style="margin-bottom:14px"><h2 style="font-size:1.25rem"><span class="material-symbols-rounded">group</span> Music people</h2></div>
+    <% if (people.length === 0) { %>
+      <div class="card card-pad empty"><span class="material-symbols-rounded">group_off</span><p>No accounts yet. <a href="/admin/new" style="color:var(--primary)">Open the first one</a>.</p></div>
+    <% } else { %>
+      <div class="list">
+        <% people.forEach(function(p){ var cats = h.catObjects(p.categories); %>
+          <div class="row-card">
+            <%- include('../partials/avatar', { name: p.display_name, photo: p.photo, size: 52 }) %>
+            <div class="row-main">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span class="row-title"><%= p.display_name %></span>
+                <% if (p.featured) { %><span class="status is-booked"><span class="material-symbols-rounded">star</span> Featured</span><% } %>
+                <% if (!p.active) { %><span class="status is-declined"><span class="material-symbols-rounded">visibility_off</span> Hidden</span><% } %>
+                <% if (p.user_role === 'admin') { %><span class="status is-accepted"><span class="material-symbols-rounded">shield</span> Admin</span><% } %>
+              </div>
+              <div class="row-sub">
+                <span><span class="material-symbols-rounded">mail</span> <%= p.user_email %></span>
+                <% cats.slice(0,3).forEach(function(c){ %><span><span class="material-symbols-rounded"><%= c.icon %></span> <%= c.label %></span><% }) %>
+              </div>
+            </div>
+            <div class="row-actions">
+              <a href="/p/<%= p.id %>" class="btn btn-ghost btn-sm" title="View profile"><span class="material-symbols-rounded">visibility</span></a>
+              <form action="/admin/performer/<%= p.id %>/flag" method="post" style="display:inline">
+                <input type="hidden" name="field" value="featured" />
+                <button class="btn btn-ghost btn-sm" title="Feature"><span class="material-symbols-rounded <%= p.featured ? 'fill' : '' %>">star</span></button>
+              </form>
+              <form action="/admin/performer/<%= p.id %>/flag" method="post" style="display:inline">
+                <input type="hidden" name="field" value="active" />
+                <button class="btn btn-ghost btn-sm" title="<%= p.active ? 'Hide' : 'Show' %>"><span class="material-symbols-rounded"><%= p.active ? 'visibility' : 'visibility_off' %></span></button>
+              </form>
+              <form action="/admin/user/<%= p.user_id %>/password" method="post" style="display:inline" onsubmit="return confirm('Set a new password for <%= p.display_name %>?')">
+                <button class="btn btn-ghost btn-sm" title="New password"><span class="material-symbols-rounded">key</span></button>
+              </form>
+              <% if (p.user_role !== 'admin' || admins.length > 1) { %>
+              <form action="/admin/user/<%= p.user_id %>/delete" method="post" style="display:inline" onsubmit="return confirm('Delete the entire account for <%= p.display_name %>? This cannot be undone.')">
+                <button class="btn btn-danger btn-sm" title="Delete"><span class="material-symbols-rounded">delete</span></button>
+              </form>
+              <% } %>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>

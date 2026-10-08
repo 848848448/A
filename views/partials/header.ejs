@@ -1,0 +1,49 @@
+<header class="appbar">
+  <div class="container appbar-inner">
+    <a href="/" class="brand">
+      <span class="logo"><span class="material-symbols-rounded fill">music_note</span></span>
+      <span>Music Directory<small>Singers · Players · All music people</small></span>
+    </a>
+
+    <nav class="nav" id="mainNav">
+      <a href="/" class="navlink <%= path === '/' ? 'active' : '' %>">
+        <span class="material-symbols-rounded">search</span> Browse
+      </a>
+      <% if (currentUser) { %>
+        <a href="/dashboard" class="navlink <%= path.startsWith('/dashboard') ? 'active' : '' %>">
+          <span class="material-symbols-rounded">dashboard</span> My Dashboard
+        </a>
+        <% if (currentUser.role === 'admin') { %>
+          <a href="/admin" class="navlink <%= path.startsWith('/admin') ? 'active' : '' %>">
+            <span class="material-symbols-rounded">admin_panel_settings</span> Admin
+          </a>
+        <% } %>
+        <form action="/auth/logout" method="post" style="margin:0">
+          <button class="navlink" style="border:none;background:none;cursor:pointer;font-family:inherit">
+            <span class="material-symbols-rounded">logout</span> Log out
+          </button>
+        </form>
+      <% } else { %>
+        <a href="/auth/login" class="navlink <%= path.startsWith('/auth') ? 'active' : '' %>">
+          <span class="material-symbols-rounded">login</span> Log in
+        </a>
+      <% } %>
+    </nav>
+
+    <button class="icon-btn" onclick="toggleTheme()" title="Switch theme" aria-label="Switch theme">
+      <span class="material-symbols-rounded" id="theme-icon">dark_mode</span>
+    </button>
+    <button class="icon-btn menu-toggle" onclick="toggleMenu()" aria-label="Menu">
+      <span class="material-symbols-rounded">menu</span>
+    </button>
+  </div>
+</header>
+
+<% if (typeof flash !== 'undefined' && flash) { %>
+  <div class="container" style="padding-top:18px">
+    <div class="flash flash-<%= flash.type %>">
+      <span class="material-symbols-rounded"><%= flash.type === 'success' ? 'check_circle' : (flash.type === 'error' ? 'error' : 'info') %></span>
+      <div><%= flash.msg %></div>
+    </div>
+  </div>
+<% } %>

@@ -1,0 +1,673 @@
+import { Hono } from 'hono';
+import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
+
+import { CATEGORY_MAP } from './lib/constants.js';
+import { todayISO, fmtDate } from './lib/helpers.js';
+import { hashPassword, verifyPassword, createSession, getSessionUser, destroySession } from './lib/auth.js';
+import { layout } from './views/layout.js';
+import { indexPage, performerPage, loginPage, errorPage, infoPage, contactPage, savedPage, bookingSentPage, joinPage } from './views/pages.js';
+import { dashHome, dashProfile, dashAvailability, dashBookings, dashSettings } from './views/dashboard.js';
+import { adminHome, adminNew, adminBookings, adminReviews, adminMessages } from './views/admin.js';
+import apiApp from './api.js';
+
+const app = new Hono();
+
+// JSON API for the native app.
+app.route('/api', apiApp);
+
+/* ---------------- helpers ---------------- */
+const isSecure = (c) => new URL(c.req.url).protocol === 'https:';
+
+function flash(c, type, msg) {
+  setCookie(c, 'flash', encodeURIComponent(JSON.stringify({ type, msg })), {
+    path: '/', httpOnly: true, sameSite: 'Lax', secure: isSecure(c), maxAge: 120,
+  });
+}
+
+function render(c, title, body, meta = {}) {
+  const u = new URL(c.req.url);
+  return c.html(layout({
+    title, user: c.get('user'), path: u.pathname, flash: c.get('flash'), body,
+    origin: u.origin, url: u.origin + u.pathname,
+    description: meta.description, image: meta.image,
+  }));
+}
+
+function randomHex(n) {
+  const b = crypto.getRandomValues(new Uint8Array(n));
+  return Array.from(b).map((x) => x.toString(16).padStart(2, '0')).join('');
+}
+
+async function myPerformer(DB, user) {
+  let p = await DB.prepare('SELECT * FROM performers WHERE user_id = ?').bind(user.id).first();
+  if (!p) {
+    const r = await DB.prepare('INSERT INTO performers (user_id, display_name, active) VALUES (?, ?, 0)')
+      .bind(user.id, user.name).run();
+    p = await DB.prepare('SELECT * FROM performers WHERE id = ?').bind(r.meta.last_row_id).first();
+  }
+  return p;
+}
+
+/* ---------------- global middleware: session + flash ---------------- */
+app.use('*', async (c, next) => {
+  // flash
+  const fc = getCookie(c, 'flash');
+  let fl = null;
+  if (fc) {
+    try { fl = JSON.parse(decodeURIComponent(fc)); } catch (e) { fl = null; }
+    deleteCookie(c, 'flash', { path: '/' });
+  }
+  c.set('flash', fl);
+  // user
+  const sid = getCookie(c, 'sid');
+  const user = sid ? await getSessionUser(c.env.DB, sid) : null;
+  c.set('user', user);
+  await next();
+});
+
+function requireLogin(c) {
+  if (!c.get('user')) {
+    flash(c, 'error', 'Please log in first.');
+    return c.redirect('/auth/login?next=' + encodeURIComponent(new URL(c.req.url).pathname));
+  }
+  return null;
+}
+function requireAdmin(c) {
+  const u = c.get('user');
+  if (!u || u.role !== 'admin') {
+    return c.html(layout({ title: 'Not allowed', user: u, path: '/admin', flash: null,
+      body: errorPage({ code: 403, message: 'Only an administrator can access this page.' }) }), 403);
+  }
+  return null;
+}
+
+/* ================= PUBLIC ================= */
+app.get('/', async (c) => {
+  const DB = c.env.DB;
+  const q = (c.req.query('q') || '').trim();
+  const cat = (c.req.query('cat') || '').trim();
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(c.req.query('date') || '') ? c.req.query('date') : '';
+  const sort = ['name', 'new', 'available', 'rating'].includes(c.req.query('sort')) ? c.req.query('sort') : 'featured';
+  let sql = 'SELECT * FROM performers WHERE active = 1';
+  const params = [];
+  if (q) { sql += ' AND (display_name LIKE ? OR bio LIKE ? OR location LIKE ? OR genres LIKE ?)'; const l = `%${q}%`; params.push(l, l, l, l); }
+  if (cat && CATEGORY_MAP[cat]) {
+    sql += ' AND (categories = ? OR categories LIKE ? OR categories LIKE ? OR categories LIKE ?)';
+    params.push(cat, `${cat},%`, `%,${cat},%`, `%,${cat}`);
+  }
+  if (date) {
+    sql += " AND id IN (SELECT performer_id FROM availability WHERE date = ? AND status = 'available')";
+    params.push(date);
+  }
+  const orderBy = sort === 'name' ? 'display_name COLLATE NOCASE ASC'
+    : sort === 'new' ? 'created_at DESC, display_name COLLATE NOCASE ASC'
+    : 'featured DESC, display_name COLLATE NOCASE ASC';
+  sql += ' ORDER BY ' + orderBy;
+  const { results } = await DB.prepare(sql).bind(...params).all();
+  const today = todayISO();
+  // One aggregated query for free-day counts instead of one per performer.
+  const { results: freeRows } = await DB.prepare(
+    "SELECT performer_id, COUNT(*) AS c FROM availability WHERE status = 'available' AND date >= ? GROUP BY performer_id"
+  ).bind(today).all();
+  const freeMap = {};
+  for (const r of freeRows) freeMap[r.performer_id] = r.c;
+  const { results: rateRows } = await DB.prepare(
+    'SELECT performer_id, AVG(rating) AS a, COUNT(*) AS c FROM reviews WHERE approved = 1 GROUP BY performer_id'
+  ).all();
+  const rateMap = {};
+  for (const r of rateRows) rateMap[r.performer_id] = { avg: Math.round(r.a * 10) / 10, count: r.c };
+  let performers = results.map((p) => ({
+    ...p, freeCount: freeMap[p.id] || 0,
+    ratingAvg: rateMap[p.id] ? rateMap[p.id].avg : 0,
+    ratingCount: rateMap[p.id] ? rateMap[p.id].count : 0,
+  }));
+  if (sort === 'available') performers = performers.sort((a, b) => b.freeCount - a.freeCount);
+  else if (sort === 'rating') performers = performers.sort((a, b) => (b.ratingAvg - a.ratingAvg) || (b.ratingCount - a.ratingCount));
+  const total = (await DB.prepare('SELECT COUNT(*) AS c FROM performers WHERE active = 1').first()).c;
+  const showcase = !q && !cat && !date;
+  const featured = showcase ? performers.filter((p) => p.featured).slice(0, 6) : [];
+  return render(c, 'Music Directory', indexPage({ performers, q, cat, total, date, sort, featured, showcase }));
+});
+
+app.get('/p/:id', async (c) => {
+  const DB = c.env.DB;
+  const performer = await DB.prepare('SELECT * FROM performers WHERE id = ? AND active = 1').bind(c.req.param('id')).first();
+  if (!performer) return notFound(c);
+  const today = todayISO();
+  const { results } = await DB.prepare('SELECT date, status, note FROM availability WHERE performer_id = ?').bind(performer.id).all();
+  const map = {};
+  for (const r of results) map[r.date] = { status: r.status, note: r.note };
+  const days = [];
+  const start = new Date(today + 'T00:00:00Z');
+  for (let i = 0; i < 60; i++) {
+    const d = new Date(start.getTime() + i * 86400000);
+    const iso = d.toISOString().slice(0, 10);
+    days.push({ iso, info: map[iso] || null, dow: d.getUTCDay(), dom: d.getUTCDate(), month: d.getUTCMonth() });
+  }
+  const { results: reviews } = await DB.prepare(
+    'SELECT author_name, rating, comment, created_at FROM reviews WHERE performer_id = ? AND approved = 1 ORDER BY created_at DESC LIMIT 50'
+  ).bind(performer.id).all();
+  const agg = await DB.prepare('SELECT COUNT(*) AS c, AVG(rating) AS a FROM reviews WHERE performer_id = ? AND approved = 1').bind(performer.id).first();
+  const ratingCount = agg.c || 0;
+  const ratingAvg = ratingCount ? Math.round(agg.a * 10) / 10 : 0;
+  const catLabels = (performer.categories || '').split(',').map((k) => (CATEGORY_MAP[k] ? CATEGORY_MAP[k].label : '')).filter(Boolean).join(', ');
+  const metaDesc = `${performer.display_name}${catLabels ? ' — ' + catLabels : ''}. ${performer.location ? 'Based in ' + performer.location + '. ' : ''}${performer.bio || 'See availability and send a booking request on Music Directory.'}`;
+  return render(c, performer.display_name, performerPage({ performer, days, today, reviews, ratingAvg, ratingCount }),
+    { description: metaDesc, image: performer.photo || '' });
+});
+
+app.post('/p/:id/review', async (c) => {
+  const DB = c.env.DB;
+  const performer = await DB.prepare('SELECT * FROM performers WHERE id = ? AND active = 1').bind(c.req.param('id')).first();
+  if (!performer) return notFound(c);
+  const b = await c.req.parseBody();
+  const name = String(b.author_name || '').trim().slice(0, 80);
+  let rating = parseInt(b.rating, 10); if (!(rating >= 1 && rating <= 5)) rating = 5;
+  const comment = String(b.comment || '').trim().slice(0, 1000);
+  if (!name) { flash(c, 'error', 'Please add your name to leave a review.'); return c.redirect('/p/' + performer.id); }
+  await DB.prepare('INSERT INTO reviews (performer_id, author_name, rating, comment, approved) VALUES (?, ?, ?, ?, 0)')
+    .bind(performer.id, name, rating, comment).run();
+  flash(c, 'success', 'Thank you! Your review was submitted and will show after a quick check.');
+  return c.redirect('/p/' + performer.id);
+});
+
+app.post('/p/:id/book', async (c) => {
+  const DB = c.env.DB;
+  const performer = await DB.prepare('SELECT * FROM performers WHERE id = ? AND active = 1').bind(c.req.param('id')).first();
+  if (!performer) return notFound(c);
+  const b = await c.req.parseBody();
+  const name = String(b.requester_name || '').trim();
+  const phone = String(b.requester_phone || '').trim();
+  const email = String(b.requester_email || '').trim();
+  const eventDate = String(b.event_date || '').trim();
+  if (!name || !eventDate || (!phone && !email)) {
+    flash(c, 'error', 'Please provide your name, a date, and a way to reach you (phone or email).');
+    return c.redirect('/p/' + performer.id + '#book');
+  }
+  // Don't accept a request for a date the artist already marked taken.
+  const av = await DB.prepare('SELECT status FROM availability WHERE performer_id = ? AND date = ?').bind(performer.id, eventDate).first();
+  if (av && (av.status === 'unavailable' || av.status === 'booked')) {
+    flash(c, 'error', `${performer.display_name} is not available on ${fmtDate(eventDate)}. Please choose a different date.`);
+    return c.redirect('/p/' + performer.id + '#book');
+  }
+  await DB.prepare(`INSERT INTO bookings (performer_id, requester_name, requester_phone, requester_email, event_date, event_type, location, message)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).bind(
+    performer.id, name, phone, email, eventDate,
+    String(b.event_type || '').trim(), String(b.location || '').trim(), String(b.message || '').trim()
+  ).run();
+  return render(c, 'Request sent', bookingSentPage({ performer, eventDate: eventDate, name }));
+});
+
+/* ================= INFO / CONTACT ================= */
+app.get('/about', (c) => render(c, 'About', infoPage('about')));
+app.get('/terms', (c) => render(c, 'Terms of Use', infoPage('terms')));
+app.get('/privacy', (c) => render(c, 'Privacy', infoPage('privacy')));
+app.get('/saved', (c) => render(c, 'Saved', savedPage()));
+
+app.get('/contact', (c) => render(c, 'Contact', contactPage()));
+app.post('/contact', async (c) => {
+  const b = await c.req.parseBody();
+  const name = String(b.name || '').trim().slice(0, 120);
+  const body = String(b.body || '').trim().slice(0, 4000);
+  if (!name || !body) {
+    flash(c, 'error', 'Please add your name and a message.');
+    return c.redirect('/contact');
+  }
+  await c.env.DB.prepare('INSERT INTO messages (name, email, phone, subject, body) VALUES (?, ?, ?, ?, ?)')
+    .bind(name, String(b.email || '').trim().slice(0, 160), String(b.phone || '').trim().slice(0, 60),
+      String(b.subject || '').trim().slice(0, 160), body).run();
+  flash(c, 'success', 'Thank you! Your message was sent — we\'ll get back to you.');
+  return c.redirect('/contact');
+});
+
+/* ================= ARTIST SELF-SIGNUP ================= */
+app.get('/join', (c) => {
+  if (c.get('user')) return c.redirect('/dashboard');
+  return render(c, 'List yourself', joinPage());
+});
+
+app.post('/join', async (c) => {
+  const DB = c.env.DB;
+  const b = await c.req.parseBody({ all: true });
+  const name = String(b.name || '').trim();
+  const email = String(b.email || '').trim().toLowerCase();
+  const password = String(b.password || '');
+  const displayName = String(b.display_name || name).trim() || name;
+  let cats = b.categories || []; if (!Array.isArray(cats)) cats = [cats]; cats = cats.filter((x) => CATEGORY_MAP[x]);
+  if (!name || !email || password.length < 6) {
+    flash(c, 'error', 'Please provide a name, an email, and a password (at least 6 characters).'); return c.redirect('/join');
+  }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { flash(c, 'error', 'Please enter a valid email address.'); return c.redirect('/join'); }
+  if (await DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first()) {
+    flash(c, 'error', 'An account with that email already exists — try logging in.'); return c.redirect('/join');
+  }
+  const r = await DB.prepare('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)')
+    .bind(name, email, await hashPassword(password), 'performer').run();
+  await DB.prepare('INSERT INTO performers (user_id, display_name, categories, phone, location, active) VALUES (?, ?, ?, ?, ?, 0)')
+    .bind(r.meta.last_row_id, displayName, cats.join(','), String(b.phone || '').trim(), String(b.location || '').trim()).run();
+  const sid = await createSession(DB, r.meta.last_row_id);
+  setCookie(c, 'sid', sid, { path: '/', httpOnly: true, sameSite: 'Lax', secure: isSecure(c), maxAge: 60 * 60 * 24 * 14 });
+  flash(c, 'success', 'Welcome! Complete your profile below — an administrator will review it before it goes public.');
+  return c.redirect('/dashboard/profile');
+});
+
+/* ================= AUTH ================= */
+app.get('/auth/login', (c) => {
+  if (c.get('user')) return c.redirect('/dashboard');
+  return render(c, 'Log in', loginPage({ next: c.req.query('next') || '' }));
+});
+
+app.post('/auth/login', async (c) => {
+  const DB = c.env.DB;
+  const b = await c.req.parseBody();
+  const email = String(b.email || '').trim().toLowerCase();
+  const password = String(b.password || '');
+  const next = typeof b.next === 'string' && b.next.startsWith('/') ? b.next : '/dashboard';
+  const user = await DB.prepare('SELECT * FROM users WHERE email = ?').bind(email).first();
+  if (!user || !(await verifyPassword(password, user.password_hash))) {
+    flash(c, 'error', 'Email or password is incorrect.');
+    return c.redirect('/auth/login' + (b.next ? '?next=' + encodeURIComponent(String(b.next)) : ''));
+  }
+  const sid = await createSession(DB, user.id);
+  setCookie(c, 'sid', sid, { path: '/', httpOnly: true, sameSite: 'Lax', secure: isSecure(c), maxAge: 60 * 60 * 24 * 14 });
+  flash(c, 'success', `Welcome, ${user.name}!`);
+  return c.redirect(next);
+});
+
+app.post('/auth/logout', async (c) => {
+  const sid = getCookie(c, 'sid');
+  if (sid) await destroySession(c.env.DB, sid);
+  deleteCookie(c, 'sid', { path: '/' });
+  return c.redirect('/');
+});
+
+app.post('/auth/password', async (c) => {
+  const redir = requireLogin(c); if (redir) return redir;
+  const DB = c.env.DB;
+  const b = await c.req.parseBody();
+  const user = await DB.prepare('SELECT * FROM users WHERE id = ?').bind(c.get('user').id).first();
+  if (!(await verifyPassword(String(b.current || ''), user.password_hash))) {
+    flash(c, 'error', 'Current password is incorrect.'); return c.redirect('/dashboard/settings');
+  }
+  const next = String(b.next_password || '');
+  if (next.length < 6) { flash(c, 'error', 'The new password must be at least 6 characters.'); return c.redirect('/dashboard/settings'); }
+  if (next !== String(b.confirm || '')) { flash(c, 'error', 'The two passwords do not match.'); return c.redirect('/dashboard/settings'); }
+  await DB.prepare('UPDATE users SET password_hash = ? WHERE id = ?').bind(await hashPassword(next), user.id).run();
+  flash(c, 'success', 'Your password has been changed.');
+  return c.redirect('/dashboard/settings');
+});
+
+/* ================= DASHBOARD ================= */
+async function pendingCount(DB, performerId) {
+  return (await DB.prepare("SELECT COUNT(*) AS c FROM bookings WHERE performer_id = ? AND status = 'pending'").bind(performerId).first()).c;
+}
+
+app.get('/dashboard', async (c) => {
+  const redir = requireLogin(c); if (redir) return redir;
+  const DB = c.env.DB; const user = c.get('user');
+  const p = await myPerformer(DB, user);
+  const today = todayISO();
+  const stats = {
+    pending: await pendingCount(DB, p.id),
+    accepted: (await DB.prepare("SELECT COUNT(*) AS c FROM bookings WHERE performer_id = ? AND status = 'accepted'").bind(p.id).first()).c,
+    free: (await DB.prepare("SELECT COUNT(*) AS c FROM availability WHERE performer_id = ? AND status = 'available' AND date >= ?").bind(p.id, today).first()).c,
+  };
+  const { results: upcoming } = await DB.prepare('SELECT * FROM bookings WHERE performer_id = ? AND event_date >= ? ORDER BY event_date ASC LIMIT 5').bind(p.id, today).all();
+  return render(c, 'Dashboard', dashHome({ performer: p, stats, upcoming, pendingBadge: stats.pending, user }));
+});
+
+app.get('/dashboard/profile', async (c) => {
+  const redir = requireLogin(c); if (redir) return redir;
+  const DB = c.env.DB; const user = c.get('user');
+  const p = await myPerformer(DB, user);
+  return render(c, 'My Profile', dashProfile({ performer: p, pendingBadge: await pendingCount(DB, p.id), user, hasR2: !!c.env.BUCKET }));
+});
+
+app.post('/dashboard/profile', async (c) => {
+  const redir = requireLogin(c); if (redir) return redir;
+  const DB = c.env.DB; const user = c.get('user');
+  const p = await myPerformer(DB, user);
+  const b = await c.req.parseBody({ all: true });
+  let cats = b.categories || [];
+  if (!Array.isArray(cats)) cats = [cats];
+  cats = cats.filter((x) => CATEGORY_MAP[x]);
+
+  let photo = p.photo;
+  const file = b.photo_file;
+  // Photo file upload needs R2. When R2 isn't configured yet, fall back to the URL field.
+  if (c.env.BUCKET && file && typeof file === 'object' && file.size > 0 && /^image\//.test(file.type || '')) {
+    const ext = (file.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg').slice(0, 4);
+    const key = randomHex(12) + '.' + ext;
+    await c.env.BUCKET.put(key, await file.arrayBuffer(), { httpMetadata: { contentType: file.type } });
+    photo = '/uploads/' + key;
+  } else if (typeof b.photo_url === 'string' && b.photo_url.trim()) {
+    photo = b.photo_url.trim();
+  }
+  const visible = b.visible ? 1 : 0;
+  const hideContact = b.hide_contact ? 1 : 0;
+  const s = (v) => String(v || '').trim();
+  // Keep only well-formed http(s) image links from the gallery textarea.
+  const gallery = s(b.gallery).split(/[\r\n,]+/).map((x) => x.trim())
+    .filter((x) => /^https?:\/\//i.test(x)).slice(0, 12).join('\n');
+  await DB.prepare(`UPDATE performers SET display_name=?, categories=?, bio=?, phone=?, public_email=?, website=?, location=?, price_from=?, price_to=?, genres=?, experience=?, youtube_url=?, instagram_url=?, gallery=?, hide_contact=?, photo=?, active=? WHERE id=?`)
+    .bind(s(b.display_name) || user.name, cats.join(','), s(b.bio), s(b.phone), s(b.public_email), s(b.website), s(b.location),
+      s(b.price_from), s(b.price_to), s(b.genres), s(b.experience), s(b.youtube_url), s(b.instagram_url), gallery,
+      hideContact, photo, visible, p.id).run();
+  flash(c, 'success', 'Your profile has been saved.');
+  return c.redirect('/dashboard/profile');
+});
+
+app.get('/dashboard/availability', async (c) => {
+  const redir = requireLogin(c); if (redir) return redir;
+  const DB = c.env.DB; const user = c.get('user');
+  const p = await myPerformer(DB, user);
+  const today = todayISO();
+  const { results } = await DB.prepare('SELECT date, status, note FROM availability WHERE performer_id = ?').bind(p.id).all();
+  const map = {};
+  for (const r of results) map[r.date] = r;
+  const months = [];
+  const start = new Date(today + 'T00:00:00Z');
+  for (let mi = 0; mi < 3; mi++) {
+    const first = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + mi, 1));
+    const year = first.getUTCFullYear(), month = first.getUTCMonth();
+    const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+    const cells = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      cells.push({ iso, d, past: iso < today, info: map[iso] || null });
+    }
+    months.push({ year, month, cells });
+  }
+  return render(c, 'Availability', dashAvailability({ performer: p, months, pendingBadge: await pendingCount(DB, p.id), user }));
+});
+
+app.post('/dashboard/availability', async (c) => {
+  const redir = requireLogin(c); if (redir) return redir;
+  const DB = c.env.DB; const p = await myPerformer(DB, c.get('user'));
+  const b = await c.req.parseBody();
+  const date = String(b.date || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { flash(c, 'error', 'Invalid date.'); return c.redirect('/dashboard/availability'); }
+  if (b.clear === '1') {
+    await DB.prepare('DELETE FROM availability WHERE performer_id = ? AND date = ?').bind(p.id, date).run();
+  } else {
+    const status = ['available', 'unavailable', 'booked'].includes(b.status) ? b.status : 'available';
+    await DB.prepare(`INSERT INTO availability (performer_id, date, status, note) VALUES (?, ?, ?, ?)
+      ON CONFLICT(performer_id, date) DO UPDATE SET status = excluded.status, note = excluded.note`)
+      .bind(p.id, date, status, String(b.note || '').trim()).run();
+  }
+  return c.redirect('/dashboard/availability');
+});
+
+app.post('/dashboard/availability/bulk', async (c) => {
+  const redir = requireLogin(c); if (redir) return redir;
+  const DB = c.env.DB; const p = await myPerformer(DB, c.get('user'));
+  const b = await c.req.parseBody({ all: true });
+  const from = String(b.from || '').trim(), to = String(b.to || '').trim();
+  const status = ['available', 'unavailable'].includes(b.status) ? b.status : 'available';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || to < from) {
+    flash(c, 'error', 'Invalid date range.'); return c.redirect('/dashboard/availability');
+  }
+  let dows = b.dow == null ? [] : (Array.isArray(b.dow) ? b.dow : [b.dow]);
+  const dowSet = new Set(dows.map((x) => parseInt(x, 10)).filter((n) => n >= 0 && n <= 6));
+  const stmt = DB.prepare(`INSERT INTO availability (performer_id, date, status) VALUES (?, ?, ?)
+    ON CONFLICT(performer_id, date) DO UPDATE SET status = excluded.status`);
+  const batch = [];
+  let cur = new Date(from + 'T00:00:00Z'); const end = new Date(to + 'T00:00:00Z');
+  while (cur <= end) {
+    if (dowSet.size === 0 || dowSet.has(cur.getUTCDay())) batch.push(stmt.bind(p.id, cur.toISOString().slice(0, 10), status));
+    cur = new Date(cur.getTime() + 86400000);
+  }
+  if (!batch.length) { flash(c, 'error', 'No days matched — pick at least one weekday, or none for all.'); return c.redirect('/dashboard/availability'); }
+  await DB.batch(batch);
+  flash(c, 'success', `Marked ${batch.length} day${batch.length === 1 ? '' : 's'}.`);
+  return c.redirect('/dashboard/availability');
+});
+
+app.get('/dashboard/bookings', async (c) => {
+  const redir = requireLogin(c); if (redir) return redir;
+  const DB = c.env.DB; const p = await myPerformer(DB, c.get('user'));
+  const filter = ['pending', 'accepted', 'declined'].includes(c.req.query('status')) ? c.req.query('status') : 'all';
+  let sql = 'SELECT * FROM bookings WHERE performer_id = ?'; const params = [p.id];
+  if (filter !== 'all') { sql += ' AND status = ?'; params.push(filter); }
+  sql += " ORDER BY CASE status WHEN 'pending' THEN 0 WHEN 'accepted' THEN 1 ELSE 2 END, event_date ASC";
+  const { results: bookings } = await DB.prepare(sql).bind(...params).all();
+  return render(c, 'Bookings', dashBookings({ performer: p, bookings, filter, pendingBadge: await pendingCount(DB, p.id), user: c.get('user') }));
+});
+
+app.post('/dashboard/bookings/:id', async (c) => {
+  const redir = requireLogin(c); if (redir) return redir;
+  const DB = c.env.DB; const p = await myPerformer(DB, c.get('user'));
+  const booking = await DB.prepare('SELECT * FROM bookings WHERE id = ? AND performer_id = ?').bind(c.req.param('id'), p.id).first();
+  if (!booking) { flash(c, 'error', 'Booking not found.'); return c.redirect('/dashboard/bookings'); }
+  const b = await c.req.parseBody();
+  if (b.action === 'accept') {
+    await DB.prepare("UPDATE bookings SET status = 'accepted' WHERE id = ?").bind(booking.id).run();
+    await DB.prepare(`INSERT INTO availability (performer_id, date, status, note) VALUES (?, ?, 'booked', ?)
+      ON CONFLICT(performer_id, date) DO UPDATE SET status = 'booked'`).bind(p.id, booking.event_date, booking.event_type || '').run();
+    flash(c, 'success', 'The booking has been confirmed.');
+  } else if (b.action === 'decline') {
+    await DB.prepare("UPDATE bookings SET status = 'declined' WHERE id = ?").bind(booking.id).run();
+    flash(c, 'success', 'The booking has been declined.');
+  } else if (b.action === 'delete') {
+    await DB.prepare('DELETE FROM bookings WHERE id = ?').bind(booking.id).run();
+    flash(c, 'success', 'The booking has been deleted.');
+  }
+  return c.redirect('/dashboard/bookings');
+});
+
+app.get('/dashboard/bookings/:id/ics', async (c) => {
+  const redir = requireLogin(c); if (redir) return redir;
+  const DB = c.env.DB; const p = await myPerformer(DB, c.get('user'));
+  const b = await DB.prepare('SELECT * FROM bookings WHERE id = ? AND performer_id = ?').bind(c.req.param('id'), p.id).first();
+  if (!b) return notFound(c);
+  const d = (b.event_date || '').replace(/-/g, '');
+  const endDate = new Date((b.event_date || '') + 'T00:00:00Z');
+  endDate.setUTCDate(endDate.getUTCDate() + 1);
+  const dEnd = endDate.toISOString().slice(0, 10).replace(/-/g, '');
+  const esc = (s) => String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
+  const summary = (b.event_type ? b.event_type + ' — ' : 'Booking — ') + b.requester_name;
+  const descParts = [];
+  if (b.requester_phone) descParts.push('Phone: ' + b.requester_phone);
+  if (b.requester_email) descParts.push('Email: ' + b.requester_email);
+  if (b.message) descParts.push(b.message);
+  const ics = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Music Directory//EN', 'CALSCALE:GREGORIAN',
+    'BEGIN:VEVENT', `UID:booking-${b.id}@musicdirectory`, `DTSTAMP:${stamp}`,
+    `DTSTART;VALUE=DATE:${d}`, `DTEND;VALUE=DATE:${dEnd}`,
+    `SUMMARY:${esc(summary)}`, `DESCRIPTION:${esc(descParts.join('\n'))}`,
+    b.location ? `LOCATION:${esc(b.location)}` : '', 'END:VEVENT', 'END:VCALENDAR',
+  ].filter(Boolean).join('\r\n');
+  return c.body(ics, 200, {
+    'content-type': 'text/calendar; charset=utf-8',
+    'content-disposition': `attachment; filename="booking-${b.id}.ics"`,
+  });
+});
+
+app.get('/dashboard/settings', async (c) => {
+  const redir = requireLogin(c); if (redir) return redir;
+  const p = await myPerformer(c.env.DB, c.get('user'));
+  return render(c, 'Settings', dashSettings({ user: c.get('user'), pendingBadge: await pendingCount(c.env.DB, p.id) }));
+});
+
+/* ================= ADMIN ================= */
+app.get('/admin', async (c) => {
+  const redir = requireAdmin(c); if (redir) return redir;
+  const DB = c.env.DB;
+  const { results: people } = await DB.prepare(`SELECT p.*, u.name AS user_name, u.email AS user_email, u.role AS user_role
+    FROM performers p JOIN users u ON u.id = p.user_id ORDER BY p.featured DESC, p.display_name COLLATE NOCASE ASC`).all();
+  const { results: admins } = await DB.prepare("SELECT id FROM users WHERE role = 'admin'").all();
+  const stats = {
+    people: people.length,
+    pending: (await DB.prepare("SELECT COUNT(*) AS c FROM bookings WHERE status = 'pending'").first()).c,
+    bookings: (await DB.prepare('SELECT COUNT(*) AS c FROM bookings').first()).c,
+    reviewsPending: (await DB.prepare('SELECT COUNT(*) AS c FROM reviews WHERE approved = 0').first()).c,
+    messagesNew: (await DB.prepare('SELECT COUNT(*) AS c FROM messages WHERE handled = 0').first()).c,
+  };
+  return render(c, 'Admin', adminHome({ people, admins, stats }));
+});
+
+app.get('/admin/messages', async (c) => {
+  const redir = requireAdmin(c); if (redir) return redir;
+  const { results: messages } = await c.env.DB.prepare('SELECT * FROM messages ORDER BY handled ASC, created_at DESC').all();
+  return render(c, 'Messages', adminMessages({ messages }));
+});
+
+app.post('/admin/message/:id', async (c) => {
+  const redir = requireAdmin(c); if (redir) return redir;
+  const DB = c.env.DB;
+  const b = await c.req.parseBody();
+  const id = c.req.param('id');
+  if (b.action === 'handle') await DB.prepare('UPDATE messages SET handled = 1 WHERE id = ?').bind(id).run();
+  else if (b.action === 'unhandle') await DB.prepare('UPDATE messages SET handled = 0 WHERE id = ?').bind(id).run();
+  else if (b.action === 'delete') await DB.prepare('DELETE FROM messages WHERE id = ?').bind(id).run();
+  return c.redirect('/admin/messages');
+});
+
+app.get('/admin/reviews', async (c) => {
+  const redir = requireAdmin(c); if (redir) return redir;
+  const { results: reviews } = await c.env.DB.prepare(`SELECT r.*, p.display_name AS performer_name
+    FROM reviews r JOIN performers p ON p.id = r.performer_id
+    ORDER BY r.approved ASC, r.created_at DESC`).all();
+  return render(c, 'Reviews', adminReviews({ reviews }));
+});
+
+app.post('/admin/review/:id', async (c) => {
+  const redir = requireAdmin(c); if (redir) return redir;
+  const DB = c.env.DB;
+  const b = await c.req.parseBody();
+  const id = c.req.param('id');
+  if (b.action === 'approve') await DB.prepare('UPDATE reviews SET approved = 1 WHERE id = ?').bind(id).run();
+  else if (b.action === 'hide') await DB.prepare('UPDATE reviews SET approved = 0 WHERE id = ?').bind(id).run();
+  else if (b.action === 'delete') await DB.prepare('DELETE FROM reviews WHERE id = ?').bind(id).run();
+  return c.redirect('/admin/reviews');
+});
+
+app.get('/admin/new', async (c) => {
+  const redir = requireAdmin(c); if (redir) return redir;
+  return render(c, 'New Account', adminNew({ generated: randomHex(5) }));
+});
+
+app.post('/admin/new', async (c) => {
+  const redir = requireAdmin(c); if (redir) return redir;
+  const DB = c.env.DB;
+  const b = await c.req.parseBody({ all: true });
+  const name = String(b.name || '').trim();
+  const email = String(b.email || '').trim().toLowerCase();
+  const password = String(b.password || '');
+  const role = b.role === 'admin' ? 'admin' : 'performer';
+  const displayName = String(b.display_name || name).trim() || name;
+  let cats = b.categories || []; if (!Array.isArray(cats)) cats = [cats]; cats = cats.filter(Boolean);
+  if (!name || !email || password.length < 6) {
+    flash(c, 'error', 'Please provide a name, an email, and a password (at least 6 characters).'); return c.redirect('/admin/new');
+  }
+  const exists = await DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first();
+  if (exists) { flash(c, 'error', 'An account with that email already exists.'); return c.redirect('/admin/new'); }
+  const r = await DB.prepare('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)')
+    .bind(name, email, await hashPassword(password), role).run();
+  await DB.prepare('INSERT INTO performers (user_id, display_name, categories, phone, location) VALUES (?, ?, ?, ?, ?)')
+    .bind(r.meta.last_row_id, displayName, cats.join(','), String(b.phone || '').trim(), String(b.location || '').trim()).run();
+  flash(c, 'success', `The account for ${name} has been created. Email: ${email} · Password: ${password}`);
+  return c.redirect('/admin');
+});
+
+app.post('/admin/performer/:id/flag', async (c) => {
+  const redir = requireAdmin(c); if (redir) return redir;
+  const DB = c.env.DB;
+  const p = await DB.prepare('SELECT * FROM performers WHERE id = ?').bind(c.req.param('id')).first();
+  if (!p) return c.redirect('/admin');
+  const b = await c.req.parseBody();
+  if (b.field === 'active') await DB.prepare('UPDATE performers SET active = ? WHERE id = ?').bind(p.active ? 0 : 1, p.id).run();
+  if (b.field === 'featured') await DB.prepare('UPDATE performers SET featured = ? WHERE id = ?').bind(p.featured ? 0 : 1, p.id).run();
+  if (b.field === 'verified') await DB.prepare('UPDATE performers SET verified = ? WHERE id = ?').bind(p.verified ? 0 : 1, p.id).run();
+  return c.redirect('/admin');
+});
+
+app.post('/admin/user/:id/password', async (c) => {
+  const redir = requireAdmin(c); if (redir) return redir;
+  const DB = c.env.DB;
+  const user = await DB.prepare('SELECT * FROM users WHERE id = ?').bind(c.req.param('id')).first();
+  if (!user) return c.redirect('/admin');
+  const b = await c.req.parseBody();
+  const pw = String(b.password || '').trim() || randomHex(5);
+  await DB.prepare('UPDATE users SET password_hash = ? WHERE id = ?').bind(await hashPassword(pw), user.id).run();
+  flash(c, 'success', `New password for ${user.name}: ${pw}`);
+  return c.redirect('/admin');
+});
+
+app.post('/admin/user/:id/delete', async (c) => {
+  const redir = requireAdmin(c); if (redir) return redir;
+  const DB = c.env.DB;
+  const user = await DB.prepare('SELECT * FROM users WHERE id = ?').bind(c.req.param('id')).first();
+  if (!user) return c.redirect('/admin');
+  if (user.id === c.get('user').id) { flash(c, 'error', 'You cannot delete your own account.'); return c.redirect('/admin'); }
+  await DB.prepare('DELETE FROM users WHERE id = ?').bind(user.id).run();
+  flash(c, 'success', `The account for ${user.name} has been deleted.`);
+  return c.redirect('/admin');
+});
+
+app.get('/admin/bookings', async (c) => {
+  const redir = requireAdmin(c); if (redir) return redir;
+  const { results: bookings } = await c.env.DB.prepare(`SELECT b.*, p.display_name AS performer_name
+    FROM bookings b JOIN performers p ON p.id = b.performer_id
+    ORDER BY CASE b.status WHEN 'pending' THEN 0 WHEN 'accepted' THEN 1 ELSE 2 END, b.event_date ASC`).all();
+  return render(c, 'All Bookings', adminBookings({ bookings }));
+});
+
+/* ===== Digital Asset Links (lets the Android TWA app run fullscreen) ===== */
+app.get('/.well-known/assetlinks.json', (c) =>
+  c.json([
+    {
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
+        package_name: 'com.musicdirectory.app',
+        sha256_cert_fingerprints: [
+          'FA:94:DB:A4:55:14:2F:5B:5E:A4:80:71:07:54:89:A1:07:97:B8:70:FF:33:26:CD:1F:A0:E0:BF:49:C8:64:94',
+        ],
+      },
+    },
+  ])
+);
+
+/* ================= SEO: robots + sitemap ================= */
+app.get('/robots.txt', (c) => {
+  const origin = new URL(c.req.url).origin;
+  return c.text(`User-agent: *\nAllow: /\nSitemap: ${origin}/sitemap.xml\n`);
+});
+
+app.get('/sitemap.xml', async (c) => {
+  const origin = new URL(c.req.url).origin;
+  const { results } = await c.env.DB.prepare('SELECT id FROM performers WHERE active = 1').all();
+  const locs = [`${origin}/`, `${origin}/auth/login`].concat(results.map((r) => `${origin}/p/${r.id}`));
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+    locs.map((l) => `  <url><loc>${l}</loc></url>`).join('\n') + `\n</urlset>`;
+  return c.body(xml, 200, { 'content-type': 'application/xml; charset=utf-8' });
+});
+
+/* ================= uploads (R2) ================= */
+app.get('/uploads/:key', async (c) => {
+  if (!c.env.BUCKET) return notFound(c);
+  const obj = await c.env.BUCKET.get(c.req.param('key'));
+  if (!obj) return notFound(c);
+  const headers = new Headers();
+  obj.writeHttpMetadata(headers);
+  headers.set('etag', obj.httpEtag);
+  headers.set('cache-control', 'public, max-age=86400');
+  return new Response(obj.body, { headers });
+});
+
+/* ================= fallback ================= */
+function notFound(c) {
+  return c.html(layout({ title: 'Not found', user: c.get('user'), path: new URL(c.req.url).pathname, flash: null,
+    body: errorPage({ code: 404, message: 'This page could not be found.' }) }), 404);
+}
+app.notFound((c) => notFound(c));
+
+app.onError((err, c) => {
+  console.error(err);
+  return c.html(layout({ title: 'Error', user: c.get('user') || null, path: '/', flash: null,
+    body: errorPage({ code: 500, message: 'Something went wrong. Please try again.' }) }), 500);
+});
+
+export default app;

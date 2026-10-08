@@ -1,0 +1,143 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<%
+  var cats = h.catObjects(performer.categories);
+  // group the 60-day window into month blocks
+  var blocks = [];
+  var cur = null;
+  days.forEach(function(d){
+    if (!cur || cur.month !== d.month) { cur = { month: d.month, year: Number(d.iso.slice(0,4)), lead: d.dow, days: [] }; blocks.push(cur); }
+    cur.days.push(d);
+  });
+  var DOWS = ['S','M','T','W','T','F','S'];
+%>
+
+<main class="page">
+  <div class="container">
+
+    <a href="/" class="btn btn-ghost btn-sm" style="margin-bottom:16px"><span class="material-symbols-rounded">arrow_back</span> Back to the directory</a>
+
+    <section class="card card-pad">
+      <div class="profile-head">
+        <%- include('partials/avatar', { name: performer.display_name, photo: performer.photo, size: 120 }) %>
+        <div style="flex:1;min-width:240px">
+          <h1><%= performer.display_name %></h1>
+          <div class="perf-cats">
+            <% cats.forEach(function(c){ %><span class="tag"><span class="material-symbols-rounded"><%= c.icon %></span> <%= c.label %></span><% }) %>
+            <% if (cats.length === 0) { %><span class="tag"><span class="material-symbols-rounded">music_note</span> Music</span><% } %>
+          </div>
+          <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:12px" class="muted">
+            <% if (performer.location) { %><span style="display:inline-flex;gap:6px;align-items:center"><span class="material-symbols-rounded">location_on</span><%= performer.location %></span><% } %>
+            <% if (performer.price_from) { %><span style="display:inline-flex;gap:6px;align-items:center"><span class="material-symbols-rounded">payments</span>From <%= performer.price_from %></span><% } %>
+          </div>
+        </div>
+        <a href="#book" class="btn btn-accent"><span class="material-symbols-rounded">event</span> Book now</a>
+      </div>
+    </section>
+
+    <div class="two-col section-gap">
+      <div>
+        <!-- bio -->
+        <% if (performer.bio) { %>
+          <section class="card card-pad">
+            <div class="section-head" style="margin-bottom:10px"><h2 style="font-size:1.2rem"><span class="material-symbols-rounded">info</span> About</h2></div>
+            <p style="margin:0;white-space:pre-line"><%= performer.bio %></p>
+          </section>
+        <% } %>
+
+        <!-- availability calendar -->
+        <section class="card card-pad section-gap">
+          <div class="section-head" style="margin-bottom:10px"><h2 style="font-size:1.2rem"><span class="material-symbols-rounded">calendar_month</span> Availability</h2></div>
+          <div class="legend" style="margin-bottom:16px">
+            <span><span class="sw" style="background:var(--success-bg)"></span> Available</span>
+            <span><span class="sw" style="background:var(--info-bg)"></span> Booked</span>
+            <span><span class="sw" style="background:var(--danger-bg)"></span> Unavailable</span>
+          </div>
+          <div class="cal-wrap">
+            <% blocks.forEach(function(b){ %>
+              <div class="cal">
+                <h3><%= h.MONTHS[b.month] %> <%= b.year %></h3>
+                <div class="cal-grid">
+                  <% DOWS.forEach(function(w){ %><div class="cal-dow"><%= w %></div><% }) %>
+                  <% for (var i=0;i<b.lead;i++){ %><div class="cal-cell"></div><% } %>
+                  <% b.days.forEach(function(d){ var st = d.info ? d.info.status : null; %>
+                    <div class="cal-cell">
+                      <% if (st === 'available') { %>
+                        <div class="cal-day s-available" onclick="pickBookDate('<%= d.iso %>')" title="Available — ready to book"><%= d.dom %></div>
+                      <% } else if (st === 'booked') { %>
+                        <div class="cal-day s-booked" title="Booked"><%= d.dom %></div>
+                      <% } else if (st === 'unavailable') { %>
+                        <div class="cal-day s-unavailable" title="Unavailable"><%= d.dom %></div>
+                      <% } else { %>
+                        <div class="cal-day" onclick="pickBookDate('<%= d.iso %>')"><%= d.dom %></div>
+                      <% } %>
+                    </div>
+                  <% }) %>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+          <p class="hint muted small" style="margin-top:14px"><span class="material-symbols-rounded" style="font-size:16px;vertical-align:-3px">touch_app</span> Click a green day to add it to your booking request.</p>
+        </section>
+      </div>
+
+      <!-- sidebar: contact + booking -->
+      <aside>
+        <section class="card card-pad">
+          <div class="section-head" style="margin-bottom:10px"><h2 style="font-size:1.2rem"><span class="material-symbols-rounded">contacts</span> Get in touch</h2></div>
+          <div class="contact-list">
+            <% if (performer.phone) { %><a href="tel:<%= performer.phone %>"><span class="material-symbols-rounded">call</span> <%= performer.phone %></a><% } %>
+            <% if (performer.public_email) { %><a href="mailto:<%= performer.public_email %>"><span class="material-symbols-rounded">mail</span> <%= performer.public_email %></a><% } %>
+            <% if (performer.website) { %><a href="<%= performer.website %>" target="_blank" rel="noopener"><span class="material-symbols-rounded">language</span> Website</a><% } %>
+            <% if (!performer.phone && !performer.public_email && !performer.website) { %>
+              <div class="ci muted"><span class="material-symbols-rounded">info</span> Send a booking request below to get in touch.</div>
+            <% } %>
+          </div>
+        </section>
+
+        <section class="card card-pad section-gap" id="book">
+          <div class="section-head" style="margin-bottom:10px"><h2 style="font-size:1.2rem"><span class="material-symbols-rounded">event</span> Book / Request</h2></div>
+          <form action="/p/<%= performer.id %>/book" method="post">
+            <div class="field">
+              <label>Your name *</label>
+              <input class="input" type="text" name="requester_name" required />
+            </div>
+            <div class="form-grid">
+              <div class="field">
+                <label>Phone</label>
+                <input class="input" type="tel" name="requester_phone" />
+              </div>
+              <div class="field">
+                <label>Email</label>
+                <input class="input" type="email" name="requester_email" />
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="field">
+                <label>Event date *</label>
+                <input class="input" type="date" id="event_date" name="event_date" min="<%= today %>" required />
+              </div>
+              <div class="field">
+                <label>Event type</label>
+                <input class="input" type="text" name="event_type" placeholder="Wedding, party…" />
+              </div>
+            </div>
+            <div class="field">
+              <label>Location</label>
+              <input class="input" type="text" name="location" placeholder="Venue / city" />
+            </div>
+            <div class="field">
+              <label>A note</label>
+              <textarea class="textarea" name="message" placeholder="Tell them what you need…"></textarea>
+            </div>
+            <button class="btn btn-accent btn-block" type="submit"><span class="material-symbols-rounded">send</span> Send request</button>
+            <p class="hint muted small" style="margin-top:10px">You must provide a name, a date, and a phone or email.</p>
+          </form>
+        </section>
+      </aside>
+    </div>
+
+  </div>
+</main>
+
+<%- include('partials/footer') %>

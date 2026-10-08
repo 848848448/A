@@ -1,0 +1,37 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+
+<main class="page">
+  <div class="container">
+    <a href="/admin" class="btn btn-ghost btn-sm" style="margin-bottom:12px"><span class="material-symbols-rounded">arrow_back</span> Back to admin</a>
+    <div class="section-head"><h2><span class="material-symbols-rounded">event</span> All bookings</h2></div>
+
+    <% if (bookings.length === 0) { %>
+      <div class="card card-pad empty"><span class="material-symbols-rounded">inbox</span><p>No bookings in the system yet.</p></div>
+    <% } else { %>
+      <div class="list">
+        <% bookings.forEach(function(b){ var st = constants.BOOKING_STATUS[b.status]; %>
+          <div class="row-card">
+            <div class="row-main">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <span class="row-title"><%= b.requester_name %></span>
+                <span class="muted">→</span>
+                <a href="/p/<%= b.performer_id %>" style="color:var(--primary);font-weight:600"><%= b.performer_name %></a>
+                <span class="status <%= st.cls %>"><span class="material-symbols-rounded"><%= st.icon %></span> <%= st.label %></span>
+              </div>
+              <div class="row-sub">
+                <span><span class="material-symbols-rounded">calendar_today</span> <%= h.fmtDate(b.event_date) %></span>
+                <% if (b.event_type) { %><span><span class="material-symbols-rounded">celebration</span> <%= b.event_type %></span><% } %>
+                <% if (b.location) { %><span><span class="material-symbols-rounded">location_on</span> <%= b.location %></span><% } %>
+                <% if (b.requester_phone) { %><span><span class="material-symbols-rounded">call</span> <%= b.requester_phone %></span><% } %>
+                <% if (b.requester_email) { %><span><span class="material-symbols-rounded">mail</span> <%= b.requester_email %></span><% } %>
+              </div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>

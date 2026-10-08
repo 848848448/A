@@ -1,0 +1,85 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+
+<main class="page">
+  <div class="container">
+
+    <section class="hero">
+      <span class="material-symbols-rounded hero-deco fill">graphic_eq</span>
+      <div class="hero-note"><span class="material-symbols-rounded">verified</span> <%= total %> music people ready for you</div>
+      <h1>Find the right music for your event</h1>
+      <p>Singers, players, bands, cantors, entertainers and all music people — see when they are available, and book them right here in one place.</p>
+      <div class="searchbar">
+        <form action="/" method="get">
+          <div class="search-field">
+            <span class="material-symbols-rounded">search</span>
+            <input type="text" name="q" value="<%= q %>" placeholder="Search a name, a category, or a location…" />
+            <% if (cat) { %><input type="hidden" name="cat" value="<%= cat %>" /><% } %>
+          </div>
+          <button class="btn btn-accent" type="submit"><span class="material-symbols-rounded">search</span> Search</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- category filter chips -->
+    <section class="section-gap">
+      <div class="chips">
+        <a href="/<%= q ? '?q=' + encodeURIComponent(q) : '' %>" class="chip <%= !cat ? 'active' : '' %>">
+          <span class="material-symbols-rounded">apps</span> All
+        </a>
+        <% constants.CATEGORIES.forEach(function(c){ %>
+          <a href="/?cat=<%= c.key %><%= q ? '&q=' + encodeURIComponent(q) : '' %>" class="chip <%= cat === c.key ? 'active' : '' %>">
+            <span class="material-symbols-rounded"><%= c.icon %></span> <%= c.label %>
+          </a>
+        <% }) %>
+      </div>
+    </section>
+
+    <!-- results -->
+    <section class="section-gap">
+      <div class="section-head">
+        <h2><span class="material-symbols-rounded">library_music</span>
+          <% if (cat && constants.CATEGORY_MAP[cat]) { %><%= constants.CATEGORY_MAP[cat].label %>s<% } else { %>All music people<% } %>
+        </h2>
+        <div class="muted"><%= performers.length %> result<%= performers.length === 1 ? '' : 's' %><%= q ? ' for "' + q + '"' : '' %></div>
+      </div>
+
+      <% if (performers.length === 0) { %>
+        <div class="card card-pad empty">
+          <span class="material-symbols-rounded">search_off</span>
+          <p>No music people were found.<br>Try a different search or category.</p>
+        </div>
+      <% } else { %>
+        <div class="grid">
+          <% performers.forEach(function(p){ var cats = h.catObjects(p.categories); %>
+            <a href="/p/<%= p.id %>" class="perf-card">
+              <div class="perf-cover" style="background:linear-gradient(135deg,hsl(<%= h.colorFromString(p.display_name) %>,60%,58%),hsl(<%= (h.colorFromString(p.display_name)+40)%360 %>,60%,48%))">
+                <% if (p.photo) { %><img src="<%= p.photo %>" alt="<%= p.display_name %>" /><% } else { %><span class="ph"><%= h.initials(p.display_name) %></span><% } %>
+                <% if (p.featured) { %><span class="perf-featured"><span class="material-symbols-rounded fill">star</span> Featured</span><% } %>
+              </div>
+              <div class="perf-body">
+                <h3 class="perf-name"><%= p.display_name %></h3>
+                <div class="perf-cats">
+                  <% cats.slice(0,3).forEach(function(c){ %><span class="tag"><span class="material-symbols-rounded"><%= c.icon %></span> <%= c.label %></span><% }) %>
+                  <% if (cats.length === 0) { %><span class="tag"><span class="material-symbols-rounded">music_note</span> Music</span><% } %>
+                </div>
+                <% if (p.location) { %><div class="perf-meta"><span class="material-symbols-rounded">location_on</span> <%= p.location %></div><% } %>
+                <div class="perf-foot">
+                  <% if (p.freeCount > 0) { %>
+                    <span class="free-pill"><span class="material-symbols-rounded">event_available</span> <%= p.freeCount %> free day<%= p.freeCount === 1 ? '' : 's' %></span>
+                  <% } else { %>
+                    <span class="free-pill none"><span class="material-symbols-rounded">calendar_month</span> See calendar</span>
+                  <% } %>
+                  <span class="btn btn-tonal btn-sm">Profile <span class="material-symbols-rounded">arrow_forward</span></span>
+                </div>
+              </div>
+            </a>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+
+  </div>
+</main>
+
+<%- include('partials/footer') %>

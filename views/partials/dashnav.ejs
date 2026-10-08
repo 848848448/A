@@ -1,0 +1,13 @@
+<nav class="side">
+  <a href="/dashboard" class="<%= active === 'home' ? 'active' : '' %>"><span class="material-symbols-rounded">dashboard</span> Overview</a>
+  <a href="/dashboard/profile" class="<%= active === 'profile' ? 'active' : '' %>"><span class="material-symbols-rounded">badge</span> My Profile</a>
+  <a href="/dashboard/availability" class="<%= active === 'availability' ? 'active' : '' %>"><span class="material-symbols-rounded">calendar_month</span> Availability</a>
+  <a href="/dashboard/bookings" class="<%= active === 'bookings' ? 'active' : '' %>"><span class="material-symbols-rounded">event</span> Bookings
+    <% if (typeof pendingBadge !== 'undefined' && pendingBadge > 0) { %><span class="badge"><%= pendingBadge %></span><% } %>
+  </a>
+  <a href="/dashboard/settings" class="<%= active === 'settings' ? 'active' : '' %>"><span class="material-symbols-rounded">settings</span> Settings</a>
+  <% if (currentUser && currentUser.role === 'admin') { %>
+    <div class="divider" style="margin:10px 6px"></div>
+    <a href="/admin"><span class="material-symbols-rounded">admin_panel_settings</span> Admin Panel</a>
+  <% } %>
+</nav>
