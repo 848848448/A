@@ -49,6 +49,15 @@ function need(c, user) {
 // ---- meta ----
 api.get('/meta', (c) => c.json({ categories: CATEGORIES, bookingStatus: BOOKING_STATUS }));
 
+// ---- app update manifest (served through the API so it has CORS headers) ----
+api.get('/app-latest', async (c) => {
+  try {
+    const res = await c.env.ASSETS.fetch(new Request(new URL('/app/latest.json', c.req.url)));
+    if (!res.ok) return c.json({});
+    return c.json(await res.json());
+  } catch (e) { return c.json({}); }
+});
+
 // ---- session ----
 api.post('/login', async (c) => {
   const b = await c.req.json().catch(() => ({}));

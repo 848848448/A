@@ -60,6 +60,14 @@ jobs:
           echo "android.suppressUnsupportedCompileSdk=35" >> gradle.properties
           echo "--- variables.gradle ---"; grep -E 'compileSdkVersion|targetSdkVersion|minSdkVersion' variables.gradle
 
+      - name: Lock WebView text zoom to 100% (ignore system font scale)
+        run: |
+          set -e
+          DEST="app/android/app/src/main/java/com/musicdirectory/app/MainActivity.java"
+          mkdir -p "$(dirname "$DEST")"
+          cp app/native/MainActivity.java "$DEST"
+          echo "MainActivity override in place:"; cat "$DEST"
+
       - name: Build and sign the APK
         working-directory: app/android
         run: |

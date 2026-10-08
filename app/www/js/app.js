@@ -468,7 +468,7 @@ function capUpdater() {
 function notifyReady() { var u = capUpdater(); if (u && u.notifyAppReady) { try { u.notifyAppReady(); } catch (e) {} } }
 var _pendingUpdate = null;
 function checkForUpdate(manual) {
-  fetch(API_ORIGIN + '/app/latest.json', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+  fetch(API_BASE + '/app-latest', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
     // APP_VERSION is stamped into this exact bundle, so it reflects what's running.
     if (d && d.version && d.version !== APP_VERSION) {
       _pendingUpdate = d; showUpdateBanner(); if (manual) toast('Update available!');
