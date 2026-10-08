@@ -29,7 +29,7 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
+          packages: 'platform-tools platforms;android-34 platforms;android-35 build-tools;34.0.0 build-tools;35.0.0'
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -51,6 +51,14 @@ jobs:
       - name: Sync web assets
         working-directory: app
         run: npx cap sync android
+
+      - name: Raise compile/target SDK to 35 (required by plugin dependencies)
+        working-directory: app/android
+        run: |
+          set -e
+          sed -i 's/compileSdkVersion = 34/compileSdkVersion = 35/; s/targetSdkVersion = 34/targetSdkVersion = 35/' variables.gradle
+          echo "android.suppressUnsupportedCompileSdk=35" >> gradle.properties
+          echo "--- variables.gradle ---"; grep -E 'compileSdkVersion|targetSdkVersion' variables.gradle
 
       - name: Build and sign the APK
         working-directory: app/android
