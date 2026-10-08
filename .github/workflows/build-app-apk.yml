@@ -56,9 +56,9 @@ jobs:
         working-directory: app/android
         run: |
           set -e
-          sed -i 's/compileSdkVersion = 34/compileSdkVersion = 35/; s/targetSdkVersion = 34/targetSdkVersion = 35/' variables.gradle
+          sed -i 's/compileSdkVersion = 34/compileSdkVersion = 35/; s/targetSdkVersion = 34/targetSdkVersion = 35/; s/minSdkVersion = 22/minSdkVersion = 23/' variables.gradle
           echo "android.suppressUnsupportedCompileSdk=35" >> gradle.properties
-          echo "--- variables.gradle ---"; grep -E 'compileSdkVersion|targetSdkVersion' variables.gradle
+          echo "--- variables.gradle ---"; grep -E 'compileSdkVersion|targetSdkVersion|minSdkVersion' variables.gradle
 
       - name: Build and sign the APK
         working-directory: app/android
